@@ -35,7 +35,7 @@ let TerrainGenerator = module.exports = (function() {
 									wavelength * x / this.baseWavelength,
 									wavelength * y / this.baseWavelength,
 									wavelength * z / this.baseWavelength);
-								value = this.weightings[o] * (this.noiseOffset + noiseValue);
+								value += this.weightings[o] * (this.noiseOffset + noiseValue);
 							}
 							value /= this.totalWeight;
 						}
