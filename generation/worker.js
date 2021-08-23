@@ -7,7 +7,7 @@
 // Returns generated vorld data with complete message when finished
 
 let TerrainGenerator = require('./terrain');
-let ShapingFunctions = require('./shapingFunction');
+let ShapingFunctions = require('./shapingFunctions');
 
 onmessage = function(e) {
 	// Example Post Data

@@ -5,7 +5,7 @@
 
 // Sends progress update when no mesh is required
 // Sends complete message once vorld slice is fully meshed
-
+let Vorld = require('../core/vorld');
 let Mesher = require('./mesher');
 
 onmessage = function(e) {
@@ -28,7 +28,7 @@ onmessage = function(e) {
 		}
 	}*/
 
-	let vorld = e.data.vorldSlice;
+	let vorld = e.data.vorld;
 	let bounds = e.data.bounds;
 	let atlas = e.data.atlas;
 

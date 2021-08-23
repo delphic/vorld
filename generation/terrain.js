@@ -37,7 +37,7 @@ let TerrainGenerator = module.exports = (function() {
 									wavelength * z / this.baseWavelength);
 								value = this.weightings[o] * (this.noiseOffset + noiseValue);
 							}
-							value /= totalWeight;
+							value /= this.totalWeight;
 						}
 
 						value *= shapingFactor;
@@ -83,7 +83,7 @@ let TerrainGenerator = module.exports = (function() {
 		generator.totalWeight = 0;
 		generator.octaves = [];
 		for (let o = 0; o < generator.weightings.length; o++) {
-			octaves.push(Perlin.create(Random.fromString(generator.seed)));
+			generator.octaves.push(Perlin.create(Random.fromString(generator.seed)));
 			generator.totalWeight += generator.weightings[o];
 		}
 		generator.shapingFunction = config.shapingFunction;
@@ -91,6 +91,8 @@ let TerrainGenerator = module.exports = (function() {
 		generator.verticalTransformationDelegate = config.verticalTransformationDelegate;
 		generator.minimumBlockThreshold = config.minimumBlockThreshold;
 		generator.noiseOffset = config.noiseOffset;
+
+		return generator;
 	};
 
 	return exports;

@@ -21,9 +21,8 @@ let ShapingFunctions = module.exports = (function(){
 				return createGaussian(config);
 			case Name.NegativeY:
 				return (x, y, z) => (config.yOffset - y) / config.yDenominator;
-				break;
 			case Name.InverseY:
-				return (x, y, z) => config.numerator / y + config.yOffset;
+				return (x, y, z) => config.numerator / (y + config.yOffset);
 			default:
 				return (x, y, z) => 1;
 		}

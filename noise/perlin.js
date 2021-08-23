@@ -91,4 +91,6 @@ let PerlinNoise = module.exports = (function() {
 
 		return perlin;
 	};
+
+	return exports;
 })();

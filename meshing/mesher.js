@@ -141,4 +141,6 @@ let Mesher = module.exports = (function(){
 	
 		return mesh;
 	};
+
+	return exports;
 })();
