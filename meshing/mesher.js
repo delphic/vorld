@@ -40,15 +40,12 @@ let Mesher = module.exports = (function(){
 		}
 	};
 	
-	// delegate should be a function taking block, i, j, k, x, y, z
+	// delegate should be a function taking block, i, j, k
 	let forEachBlock = function(chunk, delegate) {
 		for (i = 0; i < chunk.size; i++) {
-			x = i - Math.floor(chunk.size/2.0);
 			for (j = 0; j < chunk.size; j++) {
-				y = j - Math.floor(chunk.size/2.0);
 				for (k = 0; k < chunk.size; k++) {
-					z = k - Math.floor(chunk.size/2.0);
-					delegate(Chunk.getBlock(chunk, i, j, k), i, j, k, x, y, z);
+					delegate(Chunk.getBlock(chunk, i, j, k), i, j, k); 
 				}
 			}
 		}
@@ -108,34 +105,34 @@ let Mesher = module.exports = (function(){
 			chunkJ = chunk.indices[1],
 			chunkK = chunk.indices[2];
 		
-		forEachBlock(chunk, function(block, i, j, k, x, y, z) {
+		forEachBlock(chunk, function(block, i, j, k) {
 			// Exists?
 			if (!block) { return; }
 	
 			// For Each Direction : Is Edge? Add quad to mesh!
 			// Front
 			if (!Vorld.getBlockByIndex(vorld, i, j, k + 1, chunkI, chunkJ, chunkK)) {
-				addQuadToMesh(mesh, atlas, block, Cardinal.front, x, y, z);
+				addQuadToMesh(mesh, atlas, block, Cardinal.front, i, j, k);
 			}
 			// Back
 			if (!Vorld.getBlockByIndex(vorld, i, j, k - 1, chunkI, chunkJ, chunkK)){
-				addQuadToMesh(mesh, atlas, block, Cardinal.back, x, y, z);
+				addQuadToMesh(mesh, atlas, block, Cardinal.back, i, j, k);
 			}
 			// Top
 			if (!Vorld.getBlockByIndex(vorld, i, j + 1, k, chunkI, chunkJ, chunkK)){
-				addQuadToMesh(mesh, atlas, block, Cardinal.top, x, y, z);
+				addQuadToMesh(mesh, atlas, block, Cardinal.top, i, j, k);
 			}
 			// Bottom
 			if (!Vorld.getBlockByIndex(vorld, i, j - 1, k, chunkI, chunkJ, chunkK)){
-				addQuadToMesh(mesh, atlas, block, Cardinal.bottom, x, y, z);
+				addQuadToMesh(mesh, atlas, block, Cardinal.bottom, i, j, k);
 			}
 			// Right
 			if (!Vorld.getBlockByIndex(vorld, i + 1, j, k, chunkI, chunkJ, chunkK)){
-				addQuadToMesh(mesh, atlas, block, Cardinal.right, x, y, z);
+				addQuadToMesh(mesh, atlas, block, Cardinal.right, i, j, k);
 			}
 			// Left
 			if (!Vorld.getBlockByIndex(vorld, i - 1, j, k, chunkI, chunkJ, chunkK)){
-				addQuadToMesh(mesh, atlas, block, Cardinal.left, x, y, z);
+				addQuadToMesh(mesh, atlas, block, Cardinal.left, i, j, k);
 			}
 		});
 	
