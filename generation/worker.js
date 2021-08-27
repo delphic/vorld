@@ -48,8 +48,39 @@ onmessage = function(e) {
 	let verticalTransformationDelegate = (block, blockAbove, y) => {
 		let vts = generationRules.verticalTransforms;
 		for (let i = 0, l = vts.length; i < l; i++) {
-			if (block == vts[i][0] && !blockAbove) {
-				return vts[i][1];
+			let vt = vts[i]; 
+			
+			let conditions = vt.conditions;
+			let pass = !!conditions.length;
+			for (let ci = 0, n = conditions.length; ci < n; ci++) {
+				switch (conditions[ci]) {
+					case "blockValue":
+						pass = pass && block == vt.block; 
+						break;
+					case "blockAboveValue":
+						pass = pass && blockAbove == vt.blockAbove;
+						break;
+					case "yMax": 
+						pass = pass && y <= vt.yMax;
+						break;
+					case "yMin":
+						pass = pass && y >= vt.yMin;
+						break;
+					case "yRange":
+						pass = pass && y >= vt.yMin && y <= vt.yMax;
+						break;
+					default:
+						console.error("Unsupported vertical transform condition " + conditions[ci]);
+						pass = false;
+						break;
+				}
+				if (!pass) {
+					break;
+				}
+			}
+
+			if (pass) {
+				block = vt.targetBlock;
 			}
 		}
 		return block;
