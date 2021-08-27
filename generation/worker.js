@@ -19,7 +19,12 @@ onmessage = function(e) {
 			neutralNoise: true,
 			thresholds: [ 0.5, 0.8 ],
 			blocksByThreshold: [ 0, 2, 1 ],	// 0 = Air, 1 = Stone, 2 = Soil, 3 = Grass 
-			verticalTransforms: [[ 2, 3 ]],
+			verticalTransforms: [{
+					conditions: [ "blockValue", "blockAboveValue" ],
+					blockAbove: 0,
+					block: 2,
+					targetBlock: 3,
+				}],
 			shapingFunction = {
 				name: "inverse_y",
 				numerator: 100,
@@ -91,7 +96,7 @@ onmessage = function(e) {
 		baseWavelength: generationRules.baseWavelength,
 		weightings: generationRules.octaveWeightings,
 		noiseOffset: generationRules.neutralNoise ? 0 : 0.5,
-		mininumBlockThreshold: generationRules.thresholds[0],
+		minimumBlockThreshold: generationRules.thresholds[0],
 		shapingFunction: ShapingFunctions.create(shapingFunction),
 		blockDelegate: blockDelegate,
 		verticalTransformationDelegate: verticalTransformationDelegate
