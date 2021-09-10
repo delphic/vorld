@@ -41,6 +41,11 @@ let TerrainGenerator = module.exports = (function() {
 							value /= this.totalWeight;
 						}
 
+						// This does trigger often... (ironically after we removed it but didn't clear cache)
+						// if (value > maxNoiseValue) {
+						// 	console.error("Maximum expected noise value: " + maxNoiseValue + " calculated noise value: " + value);
+						// }
+
 						value *= shapingFactor;
 						let block = this.blockDelegate(value);
 
