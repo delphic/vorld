@@ -119,6 +119,31 @@ let Vorld = module.exports = (function() {
 		Chunk.addBlock(chunk, blockI, blockJ, blockK, block);
 	};
 
+	exports.isBlockSolid = function(vorld, x, y, z) {
+		let block = exports.getBlock(vorld, x, y, z);
+		return block && exports.isBlockTypeSolid(vorld, block);
+	};
+
+	exports.isBlockOpaque = function(vorld, x, y, z) {
+		let block = exports.getBlock(vorld, x, y, z);
+		return block && exports.isBlockTypeOpaque(vorld, block);
+	};
+
+	// Block Config methods (arguably should move to BlockConfig module)
+	exports.isBlockTypeSolid = function(vorld, block) {
+		if (vorld.blockConfig && vorld.blockConfig[block]) {
+			return vorld.blockConfig[block].isSolid;
+		}
+		return !!block;
+	};
+
+	exports.isBlockTypeOpaque = function(vorld, block) {
+		if (vorld.blockConfig && vorld.blockConfig[block]) {
+			return vorld.blockConfig[block].isOpaque;
+		}
+		return !!block;
+	};
+
 	exports.forEachChunk = function(vorld, delegate) {
 		let chunks = vorld.chunks;
 		let keys = Object.keys(chunks);
@@ -151,7 +176,7 @@ let Vorld = module.exports = (function() {
 			}
 		}
 		// As creating from existing vorld, do not need to use Chunk.create 
-		return { chunkSize: vorld.chunkSize, chunks: chunks };
+		return { chunkSize: vorld.chunkSize, chunks: chunks, blockConfig: vorld.blockConfig };
 	};
 
 	exports.clear = function(vorld) {
@@ -164,6 +189,10 @@ let Vorld = module.exports = (function() {
 			vorld.chunkSize = parameters.chunkSize;
 		} else {
 			vorld.chunkSize = 16;
+		}
+		if (parameters && parameters.blockConfig) {
+			vorld.blockConfig = parameters.blockConfig;
+			// Expect array indexed on block type with { isOpaque: bool, isSolid: bool }
 		}
 		vorld.chunks = {};
 		if (parameters && parameters.chunks) {

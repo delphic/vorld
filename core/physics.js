@@ -71,7 +71,7 @@ let Physics = module.exports = (function(){
 			
 			// Check for collision
 			let block = Vorld.getBlock(vorld, voxel[0], voxel[1], voxel[2]);
-			if (block) {
+			if (block && Vorld.isBlockTypeSolid(vorld, block)) { // TODO: Might want to replace with layers rather than isSolid
 				// Might be interesting to check that origin + s * direction = hitPoint (float precision)
 				return s;
 			} else if (block === null) {
