@@ -136,6 +136,12 @@ let Mesher = module.exports = (function(){
 			adjacentBlock = Vorld.getBlockByIndex(vorld, i, j + 1, k, chunkI, chunkJ, chunkK);
 			if (shouldAddQuad(adjacentBlock)){
 				addQuadToMesh(mesh, atlas, block, Cardinal.top, i, j, k);
+				if (alphaBlock) {
+					// NOTE: This only works on one internal interface because when there's only
+					// one face it's not a concave mesh, but it would be if we did all internal faces
+					// would need next chunks air blocks to generate the interface to keep ordering happy
+					addQuadToMesh(mesh, atlas, block, Cardinal.bottom, i, j + 1, k);
+				}
 			}
 			// Bottom
 			adjacentBlock = Vorld.getBlockByIndex(vorld, i, j - 1, k, chunkI, chunkJ, chunkK);
