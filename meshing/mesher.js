@@ -42,9 +42,9 @@ let Mesher = module.exports = (function(){
 	
 	// delegate should be a function taking block, i, j, k
 	let forEachBlock = function(chunk, delegate) {
-		for (i = 0; i < chunk.size; i++) {
-			for (j = 0; j < chunk.size; j++) {
-				for (k = 0; k < chunk.size; k++) {
+		for (let i = 0; i < chunk.size; i++) {
+			for (let j = 0; j < chunk.size; j++) {
+				for (let k = 0; k < chunk.size; k++) {
 					delegate(Chunk.getBlock(chunk, i, j, k), i, j, k); 
 				}
 			}
@@ -77,7 +77,7 @@ let Mesher = module.exports = (function(){
 		offset = faceIndex * 8;
 		textureCoordinates = cubeJson.textureCoordinates.slice(offset, offset + 8);
 	
-		tileIndices = [ tile, tile, tile, tile ];
+		let tileIndices = [ tile, tile, tile, tile ];
 	
 		concat(mesh.vertices, vertices);
 		concat(mesh.normals, normals);
