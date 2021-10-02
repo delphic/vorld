@@ -12,18 +12,12 @@
 
 let Vorld = require('../core/vorld');
 let Chunk = require('../core/chunk');
+let Maths = require('../core/maths');
+let Cardinal = require('../core/cardinal');
+let Direction = Cardinal.Direction;
 
 let Mesher = module.exports = (function(){
 	let exports = {};
-
-	let Cardinal = {
-		front: 0,
-		back: 1,
-		top: 2,
-		bottom: 3,
-		right: 4,
-		left: 5
-	};
 
 	// Cube mesh data - faces in order of cardinal directions
 	let cubeJson = {
@@ -45,38 +39,71 @@ let Mesher = module.exports = (function(){
 		for (let i = 0; i < chunk.size; i++) {
 			for (let j = 0; j < chunk.size; j++) {
 				for (let k = 0; k < chunk.size; k++) {
-					delegate(Chunk.getBlock(chunk, i, j, k), i, j, k); 
+					delegate(
+						Chunk.getBlock(chunk, i, j, k),
+						Chunk.getBlockRotation(chunk, i, j, k),
+						i, j, k); 
 				}
 			}
 		}
 	};
 
-	let addQuadToMesh = function(mesh, atlas, block, faceIndex, x, y, z) {
+	let addQuadToMesh = function(mesh, atlas, block, rotation, direction, x, y, z) {
 		let tile, offset, n = mesh.vertices.length / 3;
 		let vertices, normals, textureCoordinates;
-	
-		if (faceIndex == Cardinal.top) {
+
+		let localDirection = Cardinal.reverseTransformDirection(direction, rotation);
+
+		if (localDirection == Direction.up) {
 			tile = (atlas.textureArraySize - 1) - atlas.blockToTileIndex[block].top;
-		} else if (faceIndex == Cardinal.bottom) {
+		} else if (localDirection == Direction.down) {
 			tile = (atlas.textureArraySize - 1) - atlas.blockToTileIndex[block].bottom;
 		} else {
 			tile = (atlas.textureArraySize - 1) - atlas.blockToTileIndex[block].side;
 		}
-	
-		offset = faceIndex * 12;
+
+		offset = localDirection * 12;
 		vertices = cubeJson.vertices.slice(offset, offset + 12);
 
+		let vector = [];
 		for (let i = 0; i < 4; i++) {
-			vertices[3*i] = vertices[3*i] + x;
-			vertices[3*i + 1] = vertices[3*i +1] + y;
-			vertices[3*i + 2] = vertices[3*i + 2] + z;
+			vector[0] = vertices[3*i];
+			vector[1] = vertices[3*i + 1];
+			vector[2] = vertices[3*i + 2];
+			
+			if (rotation) {
+				Maths.offsetVector(vector, -0.5, -0.5, -0.5);
+				Cardinal.transformVector(vector, rotation);
+				Maths.offsetVector(vector, 0.5 + x, 0.5 + y, 0.5 + z);
+				Maths.snapVector(vector);
+			} else {
+				Maths.offsetVector(vector, x, y, z);
+			}
+
+			vertices[3*i] = vector[0];
+			vertices[3*i + 1] = vector[1];
+			vertices[3*i + 2] = vector[2];
 		}
 	
 		normals = cubeJson.normals.slice(offset, offset + 12);
+		if (rotation) {
+			for (let i = 0; i < 4; i++) {
+				vector[0] = normals[3*i];
+				vector[1] = normals[3*i + 1];
+				vector[2] = normals[3*i + 2];
+
+				Cardinal.transformVector(vector, rotation);
+				Maths.snapVector(vector);
+
+				normals[3*i] = vector[0];
+				normals[3*i + 1] = vector[1];
+				normals[3*i + 2] = vector[2];
+			}
+		}
 	
-		offset = faceIndex * 8;
+		offset = localDirection * 8;
 		textureCoordinates = cubeJson.textureCoordinates.slice(offset, offset + 8);
-	
+
 		let tileIndices = [ tile, tile, tile, tile ];
 	
 		concat(mesh.vertices, vertices);
@@ -105,7 +132,7 @@ let Mesher = module.exports = (function(){
 			chunkJ = chunk.indices[1],
 			chunkK = chunk.indices[2];
 		
-		forEachBlock(chunk, function(block, i, j, k) {
+		forEachBlock(chunk, function(block, rotation, i, j, k) {
 			// Exists?
 			if (!block) { return; }
 			if (alphaBlock && block != alphaBlock) { return; }
@@ -125,38 +152,38 @@ let Mesher = module.exports = (function(){
 			// Front
 			adjacentBlock = Vorld.getBlockByIndex(vorld, i, j, k + 1, chunkI, chunkJ, chunkK);
 			if (shouldAddQuad(adjacentBlock)) {
-				addQuadToMesh(mesh, atlas, block, Cardinal.front, i, j, k);
+				addQuadToMesh(mesh, atlas, block, rotation, Direction.forward, i, j, k);
 			}
 			// Back
 			adjacentBlock = Vorld.getBlockByIndex(vorld, i, j, k - 1, chunkI, chunkJ, chunkK);
 			if (shouldAddQuad(adjacentBlock)){
-				addQuadToMesh(mesh, atlas, block, Cardinal.back, i, j, k);
+				addQuadToMesh(mesh, atlas, block, rotation, Direction.back, i, j, k);
 			}
 			// Top
 			adjacentBlock = Vorld.getBlockByIndex(vorld, i, j + 1, k, chunkI, chunkJ, chunkK);
 			if (shouldAddQuad(adjacentBlock)){
-				addQuadToMesh(mesh, atlas, block, Cardinal.top, i, j, k);
+				addQuadToMesh(mesh, atlas, block, rotation, Direction.up, i, j, k);
 				if (alphaBlock) {
 					// NOTE: This only works on one internal interface because when there's only
 					// one face it's not a concave mesh, but it would be if we did all internal faces
 					// would need next chunks air blocks to generate the interface to keep ordering happy
-					addQuadToMesh(mesh, atlas, block, Cardinal.bottom, i, j + 1, k);
+					addQuadToMesh(mesh, atlas, block, rotation, Direction.down, i, j + 1, k);
 				}
 			}
 			// Bottom
 			adjacentBlock = Vorld.getBlockByIndex(vorld, i, j - 1, k, chunkI, chunkJ, chunkK);
 			if (shouldAddQuad(adjacentBlock)){
-				addQuadToMesh(mesh, atlas, block, Cardinal.bottom, i, j, k);
+				addQuadToMesh(mesh, atlas, block, rotation, Direction.down, i, j, k);
 			}
 			// Right
 			adjacentBlock = Vorld.getBlockByIndex(vorld, i + 1, j, k, chunkI, chunkJ, chunkK)
 			if (shouldAddQuad(adjacentBlock)){
-				addQuadToMesh(mesh, atlas, block, Cardinal.right, i, j, k);
+				addQuadToMesh(mesh, atlas, block, rotation, Direction.right, i, j, k);
 			}
 			// Left
 			adjacentBlock = Vorld.getBlockByIndex(vorld, i - 1, j, k, chunkI, chunkJ, chunkK);
 			if (shouldAddQuad(adjacentBlock)){
-				addQuadToMesh(mesh, atlas, block, Cardinal.left, i, j, k);
+				addQuadToMesh(mesh, atlas, block, rotation, Direction.left, i, j, k);
 			}
 		});
 	

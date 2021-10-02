@@ -10,9 +10,12 @@
 // entire chunk do not exceed the maximum number of vertices supported.
 
 let Chunk = require('./chunk');
+let Cardinal = require('./cardinal');
 
 let Vorld = module.exports = (function() {
 	let exports = {};
+
+	exports.Cardinal = Cardinal;
 
 	let getKey = function(i, j, k) {
 		return i + "_" + j + "_" + k;
@@ -29,7 +32,7 @@ let Vorld = module.exports = (function() {
 		return null;
 	};
 
-	exports.addBlock = function(vorld, x, y, z, block) {
+	exports.addBlock = function(vorld, x, y, z, block, up, forward) {
 		let size = vorld.chunkSize;
 		let chunkI = Math.floor(x / size),
 			chunkJ = Math.floor(y / size),
@@ -42,7 +45,7 @@ let Vorld = module.exports = (function() {
 			chunk = Chunk.create({ size: vorld.chunkSize });
 			Vorld.addChunk(vorld, chunk, chunkI, chunkJ, chunkK);
 		}
-		Chunk.addBlock(chunk, blockI, blockJ, blockK, block);
+		Chunk.addBlock(chunk, blockI, blockJ, blockK, block, up, forward);
 	};
 
 	exports.getBlock = function(vorld, x, y, z) {
@@ -87,7 +90,37 @@ let Vorld = module.exports = (function() {
 		return null;
 	};
 
-	exports.setBlockByIndex = function(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK, block) {
+	exports.getBlockUp = function(vorld, x, y, z) {
+		let size = vorld.chunkSize;
+		let chunkI = Math.floor(x / size),
+			chunkJ = Math.floor(y / size),
+			chunkK = Math.floor(z / size);
+		let blockI = x - (chunkI * size),
+			blockJ = y - (chunkJ * size),
+			blockK = z - (chunkK * size);
+		let chunk = Vorld.getChunk(vorld, chunkI, chunkJ, chunkK);
+		if (chunk) {
+			return Chunk.getBlockUp(chunk, blockI, blockJ, blockK);
+		}
+		return null;
+	};
+
+	exports.getBlockForward = function(vorld, x, y, z) {
+		let size = vorld.chunkSize;
+		let chunkI = Math.floor(x / size),
+			chunkJ = Math.floor(y / size),
+			chunkK = Math.floor(z / size);
+		let blockI = x - (chunkI * size),
+			blockJ = y - (chunkJ * size),
+			blockK = z - (chunkK * size);
+		let chunk = Vorld.getChunk(vorld, chunkI, chunkJ, chunkK);
+		if (chunk) {
+			return Chunk.getBlockForward(chunk, blockI, blockJ, blockK);
+		}
+		return null;
+	};
+
+	exports.setBlockByIndex = function(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK, block, up, forward) {
 		// Assumes you won't go out by more than chunkSize
 		if (blockI >= vorld.chunkSize) {
 			blockI = blockI - vorld.chunkSize;
@@ -116,7 +149,7 @@ let Vorld = module.exports = (function() {
 			chunk = Chunk.create({ size: vorld.chunkSize });
 			Vorld.addChunk(vorld, chunk, chunkI, chunkJ, chunkK);
 		}
-		Chunk.addBlock(chunk, blockI, blockJ, blockK, block);
+		Chunk.addBlock(chunk, blockI, blockJ, blockK, block, up, forward);
 	};
 
 	exports.isBlockSolid = function(vorld, x, y, z) {
