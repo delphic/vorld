@@ -3,7 +3,7 @@ let Maths = module.exports = (function(){
 	// Ideally would separate maths library for reuse
 	let exports = {};
 
-	exports.approximately = (a, b, epsilon) => {
+	let approximately = exports.approximately = (a, b, epsilon) => {
 		if (!epsilon) epsilon = Number.EPSILON;
 		return Math.abs(a - b) < epsilon;
 	}; 

@@ -37,7 +37,7 @@ onmessage = function(e) {
 	let alphaBlocks = [], alphaMeshes = [];
 	if (vorld.blockConfig) {
 		for (let i = 1, l = vorld.blockConfig.length; i < l; i++) {
-			if (!vorld.blockConfig[i].isOpaque) {
+			if (vorld.blockConfig[i].useAlpha) {
 				alphaBlocks.push(i);
 			}
 		}

@@ -1,7 +1,19 @@
 let Cardinal = require('./cardinal');
+let Maths = require('./maths');
 
 let Utils = module.exports = (function() {
 	let exports = {};
+
+	exports.transformPointToVorldSpace = (vector, rotation, x, y, z) => {
+		if (rotation) {
+			Maths.offsetVector(vector, -0.5, -0.5, -0.5);
+			Cardinal.transformVector(vector, rotation);
+			Maths.offsetVector(vector, 0.5 + x, 0.5 + y, 0.5 + z);
+			Maths.snapVector(vector);
+		} else {
+			Maths.offsetVector(vector, x, y, z);
+		}
+	}; 
 
 	// Method to generate rotation look ups for cardinal directions
 	exports.calculateCardinalRotationLookupTables = (furyMaths) => {

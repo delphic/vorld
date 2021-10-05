@@ -10,5 +10,6 @@ Methods to query and operate on this data are module functions rather than on th
 Include repo as submodule and use Common JS: e.g. `require('./vorld/core/vorld')`
 
 ## Build Workers
-browserify meshing/worker.js -o mesher-worker.js
-browserify generation/worker.js -o generation-worker.js
+`browserify meshing/worker.js -o mesher-worker.js`
+
+`browserify generation/worker.js -o generation-worker.js`

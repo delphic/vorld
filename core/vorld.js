@@ -120,6 +120,21 @@ let Vorld = module.exports = (function() {
 		return null;
 	};
 
+	exports.getBlockRotation = function(vorld, x, y, z) {
+		let size = vorld.chunkSize;
+		let chunkI = Math.floor(x / size),
+			chunkJ = Math.floor(y / size),
+			chunkK = Math.floor(z / size);
+		let blockI = x - (chunkI * size),
+			blockJ = y - (chunkJ * size),
+			blockK = z - (chunkK * size);
+		let chunk = Vorld.getChunk(vorld, chunkI, chunkJ, chunkK);
+		if (chunk) {
+			return Chunk.getBlockRotation(chunk, blockI, blockJ, blockK);
+		}
+		return null;
+	}
+
 	exports.setBlockByIndex = function(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK, block, up, forward) {
 		// Assumes you won't go out by more than chunkSize
 		if (blockI >= vorld.chunkSize) {
@@ -163,6 +178,13 @@ let Vorld = module.exports = (function() {
 	};
 
 	// Block Config methods (arguably should move to BlockConfig module)
+	exports.getBlockTypeDefinition = function(vorld, block) {
+		if (vorld.blockConfig && vorld.blockConfig[block]) {
+			return vorld.blockConfig[block];
+		}
+		return null;
+	};
+
 	exports.isBlockTypeSolid = function(vorld, block) {
 		if (vorld.blockConfig && vorld.blockConfig[block]) {
 			return vorld.blockConfig[block].isSolid;
@@ -175,6 +197,20 @@ let Vorld = module.exports = (function() {
 			return vorld.blockConfig[block].isOpaque;
 		}
 		return !!block;
+	};
+
+	exports.isBlockTypeAlpha = function(vorld, block) {
+		if (vorld.blockConfig && vorld.blockConfig[block]) {
+			return vorld.blockConfig[block].useAlpha;
+		}
+		return !!block;
+	};
+
+	exports.getBlockTypeMesh = function(vorld, block) {
+		if (vorld.blockConfig && vorld.blockConfig[block]) {
+			return vorld.blockConfig[block].mesh;
+		}
+		return null;
 	};
 
 	exports.forEachChunk = function(vorld, delegate) {

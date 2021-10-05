@@ -228,7 +228,7 @@ let Cardinal = module.exports = (function() {
 	};
 
 	// Converts ~ eigenvector into direction
-	let getDirectionFromVector = (v) => {
+	let getDirectionFromVector = exports.getDirectionFromVector = (v) => {
 		let threshold = 0.001;
 		if (!Maths.approximately(v[0], 0, threshold)) {
 			// Handedness again!

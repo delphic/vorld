@@ -14,6 +14,7 @@ let Vorld = require('../core/vorld');
 let Chunk = require('../core/chunk');
 let Maths = require('../core/maths');
 let Cardinal = require('../core/cardinal');
+let Utils = require('../core/utils');
 let Direction = Cardinal.Direction;
 
 let Mesher = module.exports = (function(){
@@ -48,19 +49,24 @@ let Mesher = module.exports = (function(){
 		}
 	};
 
+	let getTileIndexFromAtlas = (atlas, block, direction) => {
+		if (direction == Direction.up) {
+			tile = (atlas.textureArraySize - 1) - atlas.blockToTileIndex[block].top;
+		} else if (direction == Direction.down) {
+			tile = (atlas.textureArraySize - 1) - atlas.blockToTileIndex[block].bottom;
+		} else {
+			tile = (atlas.textureArraySize - 1) - atlas.blockToTileIndex[block].side;
+		}
+		return tile;
+	};
+
 	let addQuadToMesh = function(mesh, atlas, block, rotation, direction, x, y, z) {
 		let tile, offset, n = mesh.vertices.length / 3;
 		let vertices, normals, textureCoordinates;
 
 		let localDirection = Cardinal.reverseTransformDirection(direction, rotation);
 
-		if (localDirection == Direction.up) {
-			tile = (atlas.textureArraySize - 1) - atlas.blockToTileIndex[block].top;
-		} else if (localDirection == Direction.down) {
-			tile = (atlas.textureArraySize - 1) - atlas.blockToTileIndex[block].bottom;
-		} else {
-			tile = (atlas.textureArraySize - 1) - atlas.blockToTileIndex[block].side;
-		}
+		tile = getTileIndexFromAtlas(atlas, block, localDirection);
 
 		offset = localDirection * 12;
 		vertices = cubeJson.vertices.slice(offset, offset + 12);
@@ -71,14 +77,7 @@ let Mesher = module.exports = (function(){
 			vector[1] = vertices[3*i + 1];
 			vector[2] = vertices[3*i + 2];
 			
-			if (rotation) {
-				Maths.offsetVector(vector, -0.5, -0.5, -0.5);
-				Cardinal.transformVector(vector, rotation);
-				Maths.offsetVector(vector, 0.5 + x, 0.5 + y, 0.5 + z);
-				Maths.snapVector(vector);
-			} else {
-				Maths.offsetVector(vector, x, y, z);
-			}
+			Utils.transformPointToVorldSpace(vector, rotation, x, y, z);
 
 			vertices[3*i] = vector[0];
 			vertices[3*i + 1] = vector[1];
@@ -113,7 +112,65 @@ let Mesher = module.exports = (function(){
 		mesh.indices.push(n,n+1,n+2, n,n+2,n+3);
 	};
 
-	exports.createMesh = function(vorld, chunk, atlas, alphaBlock) {
+	let addCustomBlockMeshToMesh = (mesh, customMesh, atlas, block, rotation, x, y, z) => {
+
+		// Rotate and offset vertices
+		// For each normal determine direction and create appropriate tile index
+		// concat into mesh
+		let n = mesh.vertices.length / 3;
+		let vertices = [], normals = [], tileIndices = [], indices = [];
+		
+		let vector = [];
+		for (let i = 0, l = customMesh.vertices.length; i < l; i += 3) {
+			vector[0] = customMesh.vertices[i];
+			vector[1] = customMesh.vertices[i + 1];
+			vector[2] = customMesh.vertices[i + 2];
+			
+			if (rotation) {
+				Maths.offsetVector(vector, -0.5, -0.5, -0.5);
+				Cardinal.transformVector(vector, rotation);
+				Maths.offsetVector(vector, 0.5 + x, 0.5 + y, 0.5 + z);
+				Maths.snapVector(vector);
+			} else {
+				Maths.offsetVector(vector, x, y, z);
+			}
+
+			vertices[i] = vector[0];
+			vertices[i + 1] = vector[1];
+			vertices[i + 2] = vector[2];
+		}
+
+		for (let i = 0, l = customMesh.normals.length; i < l; i += 3) {
+			vector[0] = customMesh.normals[i];
+			vector[1] = customMesh.normals[i + 1];
+			vector[2] = customMesh.normals[i + 2];
+
+			let direction = Cardinal.getDirectionFromVector(vector);
+			let tileIndex = getTileIndexFromAtlas(atlas, block, direction);
+			tileIndices.push(tileIndex);
+
+			if (rotation) {
+				Cardinal.transformVector(vector, rotation);
+				Maths.snapVector(vector);
+			}
+
+			normals[i] = vector[0];
+			normals[i + 1] = vector[1];
+			normals[i + 2] = vector[2];
+		}
+
+		for (let i = 0, l = customMesh.indices.length; i < l; i++) {
+			indices.push(customMesh.indices[i] + n);
+		}
+
+		concat(mesh.vertices, vertices);
+		concat(mesh.normals, normals);
+		concat(mesh.textureCoordinates, customMesh.textureCoordinates);
+		concat(mesh.tileIndices, tileIndices);
+		concat(mesh.indices, indices);
+	};
+
+	exports.createMesh = function(vorld, chunk, atlas, alphaBlockToMesh) {
 		// Vorld can be whole set of data or a slice, however adjacent chunks
 		// should be provide to avoid unnecessary internal faces.
 		if (!chunk) {
@@ -135,10 +192,18 @@ let Mesher = module.exports = (function(){
 		forEachBlock(chunk, function(block, rotation, i, j, k) {
 			// Exists?
 			if (!block) { return; }
-			if (alphaBlock && block != alphaBlock) { return; }
+			if (alphaBlockToMesh && block != alphaBlockToMesh) { return; }
 
 			let isBlockOpaque = Vorld.isBlockTypeOpaque(vorld, block);
-			if (!alphaBlock && !isBlockOpaque) { return; } // alpha blocks get their own mesh
+			let isBlockAlpha = Vorld.isBlockTypeAlpha(vorld, block); // Use better time
+			if (!alphaBlockToMesh && isBlockAlpha) { return; } // alpha blocks get their own mesh
+
+			// Custom mesh, just put it in!
+			let customMesh = Vorld.getBlockTypeMesh(vorld, block);
+			if (customMesh) {
+				addCustomBlockMeshToMesh(mesh, customMesh, atlas, block, rotation, i, j, k);
+				return;
+			}
 
 			// For Each Direction : Is Edge? Add quad to mesh!
 			let adjacentBlock = null;
@@ -163,7 +228,7 @@ let Mesher = module.exports = (function(){
 			adjacentBlock = Vorld.getBlockByIndex(vorld, i, j + 1, k, chunkI, chunkJ, chunkK);
 			if (shouldAddQuad(adjacentBlock)){
 				addQuadToMesh(mesh, atlas, block, rotation, Direction.up, i, j, k);
-				if (alphaBlock) {
+				if (alphaBlockToMesh) {
 					// NOTE: This only works on one internal interface because when there's only
 					// one face it's not a concave mesh, but it would be if we did all internal faces
 					// would need next chunks air blocks to generate the interface to keep ordering happy
