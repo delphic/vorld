@@ -60,7 +60,7 @@ let VoxelShader = module.exports = (function() {
 
 					"fragColor =  mix(vec4(vLightWeight * color.rgb, color.a), vec4(uFogColor, 1.0), fogAmount);",
 				"}"].join('\n');
-			}
+		}
 	};
 
 	exports.create = function() {

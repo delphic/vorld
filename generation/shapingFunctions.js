@@ -16,16 +16,19 @@ let ShapingFunctions = module.exports = (function(){
 	};
 
 	exports.create = function(config) {
-		switch (config.name) {
-			case Name.Gaussian:
-				return createGaussian(config);
-			case Name.NegativeY:
-				return (x, y, z) => (config.yOffset - y) / config.yDenominator;
-			case Name.InverseY:
-				return (x, y, z) => config.numerator / (y + config.yOffset);
-			default:
-				return (x, y, z) => 1;
-		}
+		if (config) {
+			switch (config.name) {
+				case Name.Gaussian:
+					return createGaussian(config);
+				case Name.NegativeY:
+					return (x, y, z) => (config.yOffset - y) / config.yDenominator;
+				case Name.InverseY:
+					return (x, y, z) => config.numerator / (y + config.yOffset);
+				default:
+					return (x, y, z) => 0;
+			}
+		} 
+		return (x, y, z) => 0;
 	};
 
 	return exports;
