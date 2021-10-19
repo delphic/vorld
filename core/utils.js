@@ -82,5 +82,15 @@ let Utils = module.exports = (function() {
 		console.log(qw);
 	};
 
+	exports.forVolume = (xMin, xMax, yMin, yMax, zMin, zMax, delegate) => {
+		for (let i = 0, l = xMax - xMin; i <= l; i++) {
+			for (let k = 0, m = zMax - zMin; k <= m; k++) {
+				for (let j = 0, n = yMax - yMin; j <= n; j++) {
+					delegate(xMin + i, yMin + j, zMin + k);
+				}
+			}
+		}
+	};
+
 	return exports;
 })();

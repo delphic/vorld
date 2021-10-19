@@ -232,6 +232,7 @@ let Vorld = module.exports = (function() {
 		return true;
 	};
 
+	// Note uses chunk indices
 	exports.createSlice = function(vorld, iMin, iMax, jMin, jMax, kMin, kMax) {
 		let chunks = {};
 		for (let i = iMin; i <= iMax; i++) {
@@ -246,6 +247,14 @@ let Vorld = module.exports = (function() {
 		}
 		// As creating from existing vorld, do not need to use Chunk.create 
 		return { chunkSize: vorld.chunkSize, chunks: chunks, blockConfig: vorld.blockConfig };
+	};
+
+	exports.createSliceFromBounds = function(vorld, bounds) {
+		let size = vorld.chunkSize;
+		let iMin = Math.floor(bounds.xMin / size), iMax = Math.floor(bounds.xMax / size),
+			jMin = Math.floor(bounds.yMin / size), jMax = Math.floor(bounds.yMax / size),
+			kMin = Math.floor(bounds.zMin / size), kMax = Math.floor(bounds.zMax / size);
+		return exports.createSlice(vorld, iMin, iMax, jMin, jMax, kMin, kMax);
 	};
 
 	exports.clear = function(vorld) {
