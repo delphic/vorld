@@ -5,7 +5,31 @@ let Utils = require('./utils');
 let Physics = module.exports = (function(){
 	let exports = {};
 
-	let voxel = [];
+	let transformBoxToVorldSpace = (box, vorld, x, y, z) => {
+		let rotation = Vorld.getBlockRotation(vorld, x, y, z);
+		Utils.transformPointToVorldSpace(box.min, rotation, x, y, z);
+		Utils.transformPointToVorldSpace(box.max, rotation, x, y, z);
+		// Could probably keep a lookup table of pre-transformed rotation -> bounds and just have to offset them
+
+		if (rotation) {
+			// After rotation max and min aren't necessarily larger or smaller than each other!
+			let minX = Math.min(box.min[0], box.max[0]);
+			let minY = Math.min(box.min[1], box.max[1]);
+			let minZ = Math.min(box.min[2], box.max[2]);
+			let maxX = Math.max(box.min[0], box.max[0]);
+			let maxY = Math.max(box.min[1], box.max[1]);
+			let maxZ = Math.max(box.min[2], box.max[2]);
+			box.min[0] = minX;
+			box.min[1] = minY;
+			box.min[2] = minZ;
+			box.max[0] = maxX;
+			box.max[1] = maxY;
+			box.max[2] = maxZ;
+		}
+		// Update extents/size and center
+		box.recalculateExtents();
+		return box;
+	};
 
 	exports.appendAABBsForBlock = (out, vorld, x, y, z, createBoxDelegate) => {
 		// Based block definition and rotation + position, append as many AABB's as relevant
@@ -17,8 +41,17 @@ let Physics = module.exports = (function(){
 			}
 			if (!def.mesh) {
 				out.push(createBoxDelegate(x, y, z));
+			} else if (def.collision) {
+				// Collision is an array of bounds provided relative to the voxel origin (when not rotated)
+				for (let i = 0, l = def.collision.length; i < l; i++) {
+					let box = createBoxDelegate(x, y, z);
+					Maths.vec3.copy(box.min, def.collision[i].min);
+					Maths.vec3.copy(box.max, def.collision[i].max);
+
+					transformBoxToVorldSpace(box, vorld, x, y, z);
+					out.push(box);
+				}
 			} else {
-				let rotation = Vorld.getBlockRotation(vorld, x, y, z);
 				let box = createBoxDelegate(x, y, z); 
 
 				// NOTE: Anything with more than one AABB will need them specifying manually 
@@ -26,32 +59,13 @@ let Physics = module.exports = (function(){
 				Mesh.calculateMinPoint(box.min, def.mesh.vertices);
 				Mesh.calculateMaxPoint(box.max, def.mesh.vertices);
 				
-				Utils.transformPointToVorldSpace(box.min, rotation, x, y, z);
-				Utils.transformPointToVorldSpace(box.max, rotation, x, y, z);
-				// Could probably keep a lookup table of pre-transformed rotation -> bounds and just have to offset them
-
-				if (rotation) {
-					// After rotation max and min aren't necessarily larger or smaller than each other!
-					let minX = Math.min(box.min[0], box.max[0]);
-					let minY = Math.min(box.min[1], box.max[1]);
-					let minZ = Math.min(box.min[2], box.max[2]);
-					let maxX = Math.max(box.min[0], box.max[0]);
-					let maxY = Math.max(box.min[1], box.max[1]);
-					let maxZ = Math.max(box.min[2], box.max[2]);
-					box.min[0] = minX;
-					box.min[1] = minY;
-					box.min[2] = minZ;
-					box.max[0] = maxX;
-					box.max[1] = maxY;
-					box.max[2] = maxZ;
-				}
-				// Update extents/size and center
-				box.recalculateExtents();
+				transformBoxToVorldSpace(box, vorld, x, y, z);
 				out.push(box);
 			}
 		}
 	};
 
+	let voxel = [];
 	exports.raycast = (outHitPoint, vorld, origin, direction, distance) => {
 		if (distance === undefined || distance === null) {
 			distance = 1 / 0; // Infinite! Super Big!
