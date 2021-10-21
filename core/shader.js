@@ -1,6 +1,20 @@
 let VoxelShader = module.exports = (function() {
 	let exports = {};
 
+	let concat = (a, b) => {
+		for (let i = 0, l = b.length; i < l; i++) {
+			a.push(b[i]);
+		}
+	};
+
+	let toFloatString = (a) => {
+		let str = a.toString();
+		if (str.indexOf('.') == -1) {
+			str += ".0";
+		}
+		return str;
+	};
+
 	let shaderSource = {
 		vs: function() {
 			return [
@@ -31,8 +45,8 @@ let VoxelShader = module.exports = (function() {
 					"vLightWeight = 0.5 + 0.5 * max(dot(aVertexNormal, normalize(vec3(-1.0, 2.0, 1.0))), 0.0);",
 				"}"].join('\n');
 		},
-		fs: function() {
-			return [
+		fs: function(cutoutThreshold) {
+			let shaderArray = [
 				"#version 300 es",
 				"precision highp float;",
 				"precision highp sampler2DArray;",
@@ -59,13 +73,21 @@ let VoxelShader = module.exports = (function() {
 					"fogAmount = clamp(fogAmount, 0.0, 1.0);",
 
 					"fragColor =  mix(vec4(vLightWeight * color.rgb, color.a), vec4(uFogColor, 1.0), fogAmount);",
-				"}"].join('\n');
+			];
+			if (cutoutThreshold) {
+				// Cutout shader - note putting the if at the end has minimal disruption to the predicted path of the shader
+				concat(shaderArray, [ "if (fragColor.a < " + toFloatString(cutoutThreshold) + ") {",
+					"discard;",
+				"}" ]);
+			}
+			shaderArray.push("}")
+			return shaderArray.join('\n');
 		}
 	};
 
-	exports.create = function() {
+	exports.create = function(cutoutThreshold) {
 		let vsSource = shaderSource.vs();
-		let fsSource = shaderSource.fs();
+		let fsSource = shaderSource.fs(cutoutThreshold);
 
 		let shader = {
 			vsSource: vsSource,
