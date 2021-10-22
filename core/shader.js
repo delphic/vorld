@@ -38,11 +38,11 @@ let VoxelShader = module.exports = (function() {
 					"gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);",
 					"vTextureCoord = aTextureCoord;",
 					"vNormal = aVertexNormal;",
-					"vTileIndex = aTileIndex;",
+					"vTileIndex = floor(aTileIndex);",
 
 					"vViewSpacePosition = (uMVMatrix * vec4(aVertexPosition, 1.0)).xyz;",
 
-					"vLightWeight = 0.5 + 0.5 * max(dot(aVertexNormal, normalize(vec3(-1.0, 2.0, 1.0))), 0.0);",
+					"vLightWeight = 0.5 + 0.5 * max(dot(aVertexNormal, normalize(vec3(-1.0, 2.0, 1.0))), 0.0) - 0.25 * fract(aTileIndex);",
 				"}"].join('\n');
 		},
 		fs: function(cutoutThreshold) {

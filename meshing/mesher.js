@@ -60,7 +60,52 @@ let Mesher = module.exports = (function(){
 		return tile;
 	};
 
-	let addQuadToMesh = function(mesh, atlas, block, rotation, direction, x, y, z) {
+	let aov = [];
+	let calculateAOLevel = (vorld, vertex, direction, i, j, k, chunkI, chunkJ, chunkK) => {
+		// Calculate AO level for vertex in chunk space
+		// See - https://0fps.net/2013/07/03/ambient-occlusion-for-minecraft-like-worlds/
+		// Although we remap from 0-3 to 0.75 -> 0 (i.e. amount of light reduction)
+		// NOTE: Has artifacts on unequal corner values, depending on orientation of triangles in the quad (i.e. anisotropy)
+		// It is not very noticable for sutble levels of AO however
+		// NOTE 2: this method was only really designed to work on vertices on the grid points, 
+		// and as such has artifacts when used on custom mesh vertices that could be anywhere in the cube
+		// however it looks better than *no* AO 
+		// TODO: Adapt calculation to work to interpolate the AO level as appropriate for off grid vertices.
+		// NOTE 3: Does not take account of custom mesh vertices due to it's isBlockOpaque approach
+		// however it would probably be preferable to work on a full dynamic voxel lighting technique than adjust
+		// this method both calculate AO for custom meshes and due to their effect
+		aov[0] = 2 * (vertex[0] - i - 0.5);
+		aov[1] = 2 * (vertex[1] - j - 0.5);
+		aov[2] = 2 * (vertex[2] - k - 0.5);
+		let side0 = 0, side1 = 0, corner = 0;
+		let x = chunkI * vorld.chunkSize + i, y = chunkJ * vorld.chunkSize + j, z = chunkK * vorld.chunkSize + k;
+		switch(direction)
+		{
+			case Cardinal.Direction.up:
+			case Cardinal.Direction.down:
+				side0 = Vorld.isBlockOpaque(vorld, x + aov[0], y + aov[1], z) ? 1 : 0;
+				side1 = Vorld.isBlockOpaque(vorld, x, y + aov[1], z + aov[2]) ? 1 : 0;
+				break;
+			case Cardinal.Direction.forward:
+			case Cardinal.Direction.back:
+				side0 = Vorld.isBlockOpaque(vorld, x + aov[0], y, z + aov[2]) ? 1 : 0;
+				side1 = Vorld.isBlockOpaque(vorld, x, y + aov[1], z + aov[2]) ? 1 : 0;
+				break;
+			case Cardinal.Direction.left:
+			case Cardinal.Direction.right:
+				side0 = Vorld.isBlockOpaque(vorld, x + aov[0], y, z + aov[2]) ? 1 : 0;
+				side1 = Vorld.isBlockOpaque(vorld, x + aov[0], y + aov[1], z) ? 1 : 0;
+				break;
+		}
+		if (side0 && side1) {
+			return 0.75; // Maximum darkness
+		} else {
+			corner = Vorld.isBlockOpaque(vorld, x + aov[0], y + aov[1], z + aov[2]) ? 1 : 0;
+			return 0.25 * (side0 + side1 + corner);
+		}
+	};
+
+	let addQuadToMesh = function(mesh, vorld, atlas, block, rotation, direction, i, j, k, chunkI, chunkJ, chunkK) {
 		let tile, offset, n = mesh.vertices.length / 3;
 		let vertices, normals, textureCoordinates;
 
@@ -70,41 +115,41 @@ let Mesher = module.exports = (function(){
 
 		offset = localDirection * 12;
 		vertices = cubeJson.vertices.slice(offset, offset + 12);
-
+		
+		let tileIndices = [ tile, tile, tile, tile ];
 		let vector = [];
-		for (let i = 0; i < 4; i++) {
-			vector[0] = vertices[3*i];
-			vector[1] = vertices[3*i + 1];
-			vector[2] = vertices[3*i + 2];
+		for (let index = 0; index < 4; index++) {
+			vector[0] = vertices[3*index];
+			vector[1] = vertices[3*index + 1];
+			vector[2] = vertices[3*index + 2];
 			
-			Utils.transformPointToVorldSpace(vector, rotation, x, y, z);
+			Utils.transformPointToVorldSpace(vector, rotation, i, j, k);
+			tileIndices[index] += calculateAOLevel(vorld, vector, direction, i, j, k, chunkI, chunkJ, chunkK);
 
-			vertices[3*i] = vector[0];
-			vertices[3*i + 1] = vector[1];
-			vertices[3*i + 2] = vector[2];
+			vertices[3*index] = vector[0];
+			vertices[3*index + 1] = vector[1];
+			vertices[3*index + 2] = vector[2];
 		}
 	
 		normals = cubeJson.normals.slice(offset, offset + 12);
 		if (rotation) {
-			for (let i = 0; i < 4; i++) {
-				vector[0] = normals[3*i];
-				vector[1] = normals[3*i + 1];
-				vector[2] = normals[3*i + 2];
+			for (let index = 0; index < 4; index++) {
+				vector[0] = normals[3*index];
+				vector[1] = normals[3*index + 1];
+				vector[2] = normals[3*index + 2];
 
 				Cardinal.transformVector(vector, rotation);
 				Maths.snapVector(vector);
 
-				normals[3*i] = vector[0];
-				normals[3*i + 1] = vector[1];
-				normals[3*i + 2] = vector[2];
+				normals[3*index] = vector[0];
+				normals[3*index + 1] = vector[1];
+				normals[3*index + 2] = vector[2];
 			}
 		}
 	
 		offset = localDirection * 8;
 		textureCoordinates = cubeJson.textureCoordinates.slice(offset, offset + 8);
 
-		let tileIndices = [ tile, tile, tile, tile ];
-	
 		concat(mesh.vertices, vertices);
 		concat(mesh.normals, normals);
 		concat(mesh.textureCoordinates, textureCoordinates);
@@ -112,55 +157,59 @@ let Mesher = module.exports = (function(){
 		mesh.indices.push(n,n+1,n+2, n,n+2,n+3);
 	};
 
-	let addCustomBlockMeshToMesh = (mesh, customMesh, atlas, block, rotation, x, y, z) => {
-
+	let addCustomBlockMeshToMesh = (mesh, customMesh, vorld, atlas, block, rotation, i, j, k, chunkI, chunkJ, chunkK) => {
 		// Rotate and offset vertices
 		// For each normal determine direction and create appropriate tile index
 		// concat into mesh
 		let n = mesh.vertices.length / 3;
 		let vertices = [], normals = [], tileIndices = [], indices = [];
 		
-		let vector = [];
-		for (let i = 0, l = customMesh.vertices.length; i < l; i += 3) {
-			vector[0] = customMesh.vertices[i];
-			vector[1] = customMesh.vertices[i + 1];
-			vector[2] = customMesh.vertices[i + 2];
+		let vertex = [], normal = [];
+		for (let index = 0, l = customMesh.vertices.length; index < l; index += 3) {
+			vertex[0] = customMesh.vertices[index];
+			vertex[1] = customMesh.vertices[index + 1];
+			vertex[2] = customMesh.vertices[index + 2];
 			
 			if (rotation) {
-				Maths.offsetVector(vector, -0.5, -0.5, -0.5);
-				Cardinal.transformVector(vector, rotation);
-				Maths.offsetVector(vector, 0.5 + x, 0.5 + y, 0.5 + z);
-				Maths.snapVector(vector);
+				Maths.offsetVector(vertex, -0.5, -0.5, -0.5);
+				Cardinal.transformVector(vertex, rotation);
+				Maths.offsetVector(vertex, 0.5 + i, 0.5 + j, 0.5 + k);
+				Maths.snapVector(vertex);
 			} else {
-				Maths.offsetVector(vector, x, y, z);
+				Maths.offsetVector(vertex, i, j, k);
 			}
 
-			vertices[i] = vector[0];
-			vertices[i + 1] = vector[1];
-			vertices[i + 2] = vector[2];
+			vertices[index] = vertex[0];
+			vertices[index + 1] = vertex[1];
+			vertices[index + 2] = vertex[2];
 		}
 
-		for (let i = 0, l = customMesh.normals.length; i < l; i += 3) {
-			vector[0] = customMesh.normals[i];
-			vector[1] = customMesh.normals[i + 1];
-			vector[2] = customMesh.normals[i + 2];
+		for (let index = 0, l = customMesh.normals.length; index < l; index += 3) {
+			normal[0] = customMesh.normals[index];
+			normal[1] = customMesh.normals[index + 1];
+			normal[2] = customMesh.normals[index + 2];
 
-			let direction = Cardinal.getDirectionFromVector(vector);
+			vertex[0] = vertices[index];
+			vertex[1] = vertices[index + 1];
+			vertex[2] = vertices[index + 2];
+
+			let direction = Cardinal.getDirectionFromVector(normal);
 			let tileIndex = getTileIndexFromAtlas(atlas, block, direction);
+			tileIndex += calculateAOLevel(vorld, vertex, direction, i, j, k, chunkI, chunkJ, chunkK);
 			tileIndices.push(tileIndex);
 
 			if (rotation) {
-				Cardinal.transformVector(vector, rotation);
-				Maths.snapVector(vector);
+				Cardinal.transformVector(normal, rotation);
+				Maths.snapVector(normal);
 			}
 
-			normals[i] = vector[0];
-			normals[i + 1] = vector[1];
-			normals[i + 2] = vector[2];
+			normals[index] = normal[0];
+			normals[index + 1] = normal[1];
+			normals[index + 2] = normal[2];
 		}
 
-		for (let i = 0, l = customMesh.indices.length; i < l; i++) {
-			indices.push(customMesh.indices[i] + n);
+		for (let index = 0, l = customMesh.indices.length; index < l; index++) {
+			indices.push(customMesh.indices[index] + n);
 		}
 
 		concat(mesh.vertices, vertices);
@@ -201,7 +250,7 @@ let Mesher = module.exports = (function(){
 			// Custom mesh, just put it in!
 			let customMesh = Vorld.getBlockTypeMesh(vorld, block);
 			if (customMesh) {
-				addCustomBlockMeshToMesh(mesh, customMesh, atlas, block, rotation, i, j, k);
+				addCustomBlockMeshToMesh(mesh, customMesh, vorld, atlas, block, rotation, i, j, k, chunkI, chunkJ, chunkK);
 				return;
 			}
 
@@ -217,38 +266,38 @@ let Mesher = module.exports = (function(){
 			// Front
 			adjacentBlock = Vorld.getBlockByIndex(vorld, i, j, k + 1, chunkI, chunkJ, chunkK);
 			if (shouldAddQuad(adjacentBlock)) {
-				addQuadToMesh(mesh, atlas, block, rotation, Direction.forward, i, j, k);
+				addQuadToMesh(mesh, vorld, atlas, block, rotation, Direction.forward, i, j, k, chunkI, chunkJ, chunkK);
 			}
 			// Back
 			adjacentBlock = Vorld.getBlockByIndex(vorld, i, j, k - 1, chunkI, chunkJ, chunkK);
 			if (shouldAddQuad(adjacentBlock)){
-				addQuadToMesh(mesh, atlas, block, rotation, Direction.back, i, j, k);
+				addQuadToMesh(mesh, vorld, atlas, block, rotation, Direction.back, i, j, k, chunkI, chunkJ, chunkK);
 			}
 			// Top
 			adjacentBlock = Vorld.getBlockByIndex(vorld, i, j + 1, k, chunkI, chunkJ, chunkK);
 			if (shouldAddQuad(adjacentBlock)){
-				addQuadToMesh(mesh, atlas, block, rotation, Direction.up, i, j, k);
+				addQuadToMesh(mesh, vorld, atlas, block, rotation, Direction.up, i, j, k, chunkI, chunkJ, chunkK);
 				if (alphaBlockToMesh) {
 					// NOTE: This only works on one internal interface because when there's only
 					// one face it's not a concave mesh, but it would be if we did all internal faces
 					// would need next chunks air blocks to generate the interface to keep ordering happy
-					addQuadToMesh(mesh, atlas, block, rotation, Direction.down, i, j + 1, k);
+					addQuadToMesh(mesh, vorld, atlas, block, rotation, Direction.down, i, j + 1, k, chunkI, chunkJ, chunkK);
 				}
 			}
 			// Bottom
 			adjacentBlock = Vorld.getBlockByIndex(vorld, i, j - 1, k, chunkI, chunkJ, chunkK);
 			if (shouldAddQuad(adjacentBlock)){
-				addQuadToMesh(mesh, atlas, block, rotation, Direction.down, i, j, k);
+				addQuadToMesh(mesh, vorld, atlas, block, rotation, Direction.down, i, j, k, chunkI, chunkJ, chunkK);
 			}
 			// Right
-			adjacentBlock = Vorld.getBlockByIndex(vorld, i + 1, j, k, chunkI, chunkJ, chunkK)
+			adjacentBlock = Vorld.getBlockByIndex(vorld, i + 1, j, k, chunkI, chunkJ, chunkK);
 			if (shouldAddQuad(adjacentBlock)){
-				addQuadToMesh(mesh, atlas, block, rotation, Direction.right, i, j, k);
+				addQuadToMesh(mesh, vorld, atlas, block, rotation, Direction.right, i, j, k, chunkI, chunkJ, chunkK);
 			}
 			// Left
 			adjacentBlock = Vorld.getBlockByIndex(vorld, i - 1, j, k, chunkI, chunkJ, chunkK);
 			if (shouldAddQuad(adjacentBlock)){
-				addQuadToMesh(mesh, atlas, block, rotation, Direction.left, i, j, k);
+				addQuadToMesh(mesh, vorld, atlas, block, rotation, Direction.left, i, j, k, chunkI, chunkJ, chunkK);
 			}
 		});
 	
