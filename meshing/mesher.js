@@ -231,7 +231,8 @@ let Mesher = module.exports = (function(){
 			normals: [],
 			textureCoordinates: [],
 			tileIndices: [],
-			indices: []
+			indices: [],
+			customAttributes: [{ name: "tileBuffer", source: "tileIndices", size: 1 }]
 		};
 
 		let chunkI = chunk.indices[0],
