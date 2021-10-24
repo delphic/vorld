@@ -74,9 +74,9 @@ let Mesher = module.exports = (function(){
 		// NOTE 3: Does not take account of custom mesh vertices due to it's isBlockOpaque approach
 		// however it would probably be preferable to work on a full dynamic voxel lighting technique than adjust
 		// this method both calculate AO for custom meshes and due to their effect
-		aov[0] = 2 * (vertex[0] - i - 0.5);
-		aov[1] = 2 * (vertex[1] - j - 0.5);
-		aov[2] = 2 * (vertex[2] - k - 0.5);
+		aov[0] = Math.round(2 * (vertex[0] - i - 0.5));
+		aov[1] = Math.round(2 * (vertex[1] - j - 0.5));
+		aov[2] = Math.round(2 * (vertex[2] - k - 0.5));
 		let side0 = 0, side1 = 0, corner = 0;
 		let x = chunkI * vorld.chunkSize + i, y = chunkJ * vorld.chunkSize + j, z = chunkK * vorld.chunkSize + k;
 		switch(direction)
