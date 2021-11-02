@@ -192,37 +192,26 @@ let Cardinal = module.exports = (function() {
 
 	// Covnerts direction to eigenvector
 	let getVectorFromDirection = exports.getVectorFromDirection = (out, direction) => {
+		out[0] = out[1] = out[2]= 0;
 		switch (direction) {
 			case Direction.forward:
-				out[0] = 0;
-				out[1] = 0;
 				out[2] = 1;
 				break;
 			case Direction.back:
-				out[0] = 0;
-				out[1] = 0;
 				out[2] = -1;
 				break;
 			case Direction.up:
-				out[0] = 0;
 				out[1] = 1;
-				out[2] = 0;
 				break;
 			case Direction.down:
-				out[0] = 0;
 				out[1] = -1;
-				out[2] = 0;
 				break;
 			// Handedness
 			case Direction.right:
 				out[0] = 1;
-				out[1] = 0;
-				out[2] = 0;
 				break;
 			case Direction.left:
 				out[0] = -1;
-				out[1] = 0;
-				out[2] = 0;
 				break;
 		}
 	};
@@ -280,11 +269,13 @@ let Cardinal = module.exports = (function() {
 		return getDirectionFromVector(vec);
 	};
 
-
-
 	exports.transformVector = (v, rotation) => {
 		getQuatFromRotation(quat, rotation);
 		Maths.transformVecByQuat(v, v, quat);
+	};
+
+	exports.invertDirection = (direction) => {
+		return (direction % 2 == 0) ? direction + 1 : direction - 1;
 	};
 
 	return exports;

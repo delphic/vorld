@@ -105,7 +105,7 @@ let Mesher = module.exports = (function(){
 		}
 	};
 
-	let addQuadToMesh = function(mesh, vorld, atlas, block, rotation, direction, i, j, k, chunkI, chunkJ, chunkK) {
+	let addQuadToMesh = function(mesh, vorld, atlas, block, rotation, direction, i, j, k, chunkI, chunkJ, chunkK, offsetMagnitude) {
 		let tile, offset, n = mesh.vertices.length / 3;
 		let vertices, normals, textureCoordinates;
 
@@ -125,6 +125,13 @@ let Mesher = module.exports = (function(){
 			
 			Utils.transformPointToVorldSpace(vector, rotation, i, j, k);
 			tileIndices[index] += calculateAOLevel(vorld, vector, direction, i, j, k, chunkI, chunkJ, chunkK);
+
+			if (offsetMagnitude) {
+				Cardinal.getVectorFromDirection(offsetVector, direction);
+				vector[0] += offsetVector[0] * offsetMagnitude;
+				vector[1] += offsetVector[1] * offsetMagnitude;
+				vector[2] += offsetVector[2] * offsetMagnitude;
+			}
 
 			vertices[3*index] = vector[0];
 			vertices[3*index + 1] = vector[1];
@@ -219,6 +226,14 @@ let Mesher = module.exports = (function(){
 		concat(mesh.indices, indices);
 	};
 
+	let offsetVector = [];
+	let getAdjacentCoordinates = (out, direction, i, j, k) => {
+		Cardinal.getVectorFromDirection(out, direction);
+		out[0] += i;
+		out[1] += j;
+		out[2] += k;
+	};
+
 	exports.createMesh = function(vorld, chunk, atlas, alphaBlockToMesh) {
 		// Vorld can be whole set of data or a slice, however adjacent chunks
 		// should be provide to avoid unnecessary internal faces.
@@ -238,12 +253,15 @@ let Mesher = module.exports = (function(){
 		let chunkI = chunk.indices[0],
 			chunkJ = chunk.indices[1],
 			chunkK = chunk.indices[2];
+
+		let coord = [0, 0, 0];
 		
 		forEachBlock(chunk, function(block, rotation, i, j, k) {
 			// Exists?
 			if (!block) { return; }
 			if (alphaBlockToMesh && block != alphaBlockToMesh) { return; }
 
+			let meshInternals = !!Vorld.getBlockTypeDefinition(vorld, block).meshInternals;
 			let isBlockOpaque = Vorld.isBlockTypeOpaque(vorld, block);
 			let isBlockAlpha = Vorld.isBlockTypeAlpha(vorld, block); // Use better time
 			if (!alphaBlockToMesh && isBlockAlpha) { return; } // alpha blocks get their own mesh
@@ -261,44 +279,25 @@ let Mesher = module.exports = (function(){
 				let isAdjacentBlockOpaque = Vorld.isBlockTypeOpaque(vorld, adjacentBlock);
 				return !adjacentBlock 
 					|| (isBlockOpaque && !isAdjacentBlockOpaque)
-					|| (!isBlockOpaque && !isAdjacentBlockOpaque && block != adjacentBlock);
+					|| (!isBlockOpaque && !isAdjacentBlockOpaque && (block != adjacentBlock || meshInternals));
 			};
 
-			// Front
-			adjacentBlock = Vorld.getBlockByIndex(vorld, i, j, k + 1, chunkI, chunkJ, chunkK);
-			if (shouldAddQuad(adjacentBlock)) {
-				addQuadToMesh(mesh, vorld, atlas, block, rotation, Direction.forward, i, j, k, chunkI, chunkJ, chunkK);
-			}
-			// Back
-			adjacentBlock = Vorld.getBlockByIndex(vorld, i, j, k - 1, chunkI, chunkJ, chunkK);
-			if (shouldAddQuad(adjacentBlock)){
-				addQuadToMesh(mesh, vorld, atlas, block, rotation, Direction.back, i, j, k, chunkI, chunkJ, chunkK);
-			}
-			// Top
-			adjacentBlock = Vorld.getBlockByIndex(vorld, i, j + 1, k, chunkI, chunkJ, chunkK);
-			if (shouldAddQuad(adjacentBlock)){
-				addQuadToMesh(mesh, vorld, atlas, block, rotation, Direction.up, i, j, k, chunkI, chunkJ, chunkK);
-				if (alphaBlockToMesh) {
-					// NOTE: This only works on one internal interface because when there's only
-					// one face it's not a concave mesh, but it would be if we did all internal faces
-					// would need next chunks air blocks to generate the interface to keep ordering happy
-					addQuadToMesh(mesh, vorld, atlas, block, rotation, Direction.down, i, j + 1, k, chunkI, chunkJ, chunkK);
+			for (let dir = 0; dir < 6; dir++) {
+				getAdjacentCoordinates(coord, dir, i, j, k);
+				adjacentBlock = Vorld.getBlockByIndex(vorld, coord[0], coord[1], coord[2], chunkI, chunkJ, chunkK);
+				if (shouldAddQuad(adjacentBlock)) {
+					addQuadToMesh(mesh, vorld, atlas, block, rotation, dir, i, j, k, chunkI, chunkJ, chunkK);
+					// Mesh back face for underside of alpha meshes (i.e. water) and meshInternals against air
+					if ((meshInternals && block != adjacentBlock) || (dir == Direction.up && alphaBlockToMesh)) {
+						// NOTE: This only works for alphaBlockToMesh on one internal interface because when there's only
+						// one face it's not a concave mesh, but it would be if we did all internal faces
+						// would need next chunks air blocks to generate the interface to keep ordering happy
+						addQuadToMesh(mesh, vorld, atlas, block, rotation, Cardinal.invertDirection(dir), coord[0], coord[1], coord[2], chunkI, chunkJ, chunkK, 0.01);
+					}
+				} else if (meshInternals) {
+					// Mesh back face of borders with other blocks if meshInternal is true
+					addQuadToMesh(mesh, vorld, atlas, block, rotation, Cardinal.invertDirection(dir), coord[0], coord[1], coord[2], chunkI, chunkJ, chunkK, 0.01);
 				}
-			}
-			// Bottom
-			adjacentBlock = Vorld.getBlockByIndex(vorld, i, j - 1, k, chunkI, chunkJ, chunkK);
-			if (shouldAddQuad(adjacentBlock)){
-				addQuadToMesh(mesh, vorld, atlas, block, rotation, Direction.down, i, j, k, chunkI, chunkJ, chunkK);
-			}
-			// Right
-			adjacentBlock = Vorld.getBlockByIndex(vorld, i + 1, j, k, chunkI, chunkJ, chunkK);
-			if (shouldAddQuad(adjacentBlock)){
-				addQuadToMesh(mesh, vorld, atlas, block, rotation, Direction.right, i, j, k, chunkI, chunkJ, chunkK);
-			}
-			// Left
-			adjacentBlock = Vorld.getBlockByIndex(vorld, i - 1, j, k, chunkI, chunkJ, chunkK);
-			if (shouldAddQuad(adjacentBlock)){
-				addQuadToMesh(mesh, vorld, atlas, block, rotation, Direction.left, i, j, k, chunkI, chunkJ, chunkK);
 			}
 		});
 	
