@@ -27,6 +27,9 @@ let VoxelShader = module.exports = (function() {
 				"uniform mat4 uMVMatrix;",
 				"uniform mat4 uPMatrix;",
 
+				"uniform float uAmbientLightMagnitude;",
+				"uniform float uDirectionalLightMagnitude;",
+
 				"out vec3 vViewSpacePosition;",
 
 				"out vec2 vTextureCoord;",
@@ -42,7 +45,8 @@ let VoxelShader = module.exports = (function() {
 
 					"vViewSpacePosition = (uMVMatrix * vec4(aVertexPosition, 1.0)).xyz;",
 
-					"vLightWeight = 0.5 + 0.5 * max(dot(aVertexNormal, normalize(vec3(-1.0, 2.0, 1.0))), 0.0) - 0.25 * fract(aTileIndex);",
+					"float aoFactor = 1.0 - 0.25 * 1.333333 * fract(aTileIndex);", // 4/3 converts from 0 -> 0.75 to 0 -> 1, 0.5 reduces the impact
+					"vLightWeight = (uAmbientLightMagnitude + uDirectionalLightMagnitude * max(dot(aVertexNormal, normalize(vec3(-1.0, 2.0, 1.0))), 0.0)) * aoFactor;",
 				"}"].join('\n');
 		},
 		fs: function(cutoutThreshold) {
@@ -93,7 +97,7 @@ let VoxelShader = module.exports = (function() {
 			vsSource: vsSource,
 			fsSource: fsSource,
 				attributeNames: [ "aVertexPosition", "aVertexNormal", "aTextureCoord", "aTileIndex" ],
-				uniformNames: [ "uMVMatrix", "uPMatrix", "uSampler", "uFogColor", "uFogDensity" ],
+				uniformNames: [ "uMVMatrix", "uPMatrix", "uSampler", "uFogColor", "uFogDensity", "uAmbientLightMagnitude", "uDirectionalLightMagnitude" ],
 				textureUniformNames: [ "uSampler" ],
 				pMatrixUniformName: "uPMatrix",
 				mvMatrixUniformName: "uMVMatrix",
@@ -102,6 +106,8 @@ let VoxelShader = module.exports = (function() {
 					this.enableAttribute("aTextureCoord");
 					this.enableAttribute("aVertexNormal");
 					this.enableAttribute("aTileIndex");
+					this.setUniformFloat("uAmbientLightMagnitude", material.ambientMagnitude);
+					this.setUniformFloat("uDirectionalLightMagnitude", material.directionalMagnitude)
 					this.setUniformFloat3("uFogColor", material.fogColor[0], material.fogColor[1], material.fogColor[2]);
 					this.setUniformFloat("uFogDensity", material.fogDensity);
 				},
@@ -120,6 +126,14 @@ let VoxelShader = module.exports = (function() {
 					}
 					if (material.fogDensity === undefined) {
 						console.error("No fogDensity poperty specified on material using Voxel shader");
+					}
+					if (material.ambientMagnitude === undefined) {
+						console.warn("No ambientMangitude property specified on material using Voxel shader, setting to 0.5");
+						material.ambientMagnitude = 0.5;
+					}
+					if (material.directionalMagnitude === undefined) {
+						console.warn("No directionalMagnitudee property specified on material using Voxel shader, setting to 0.5");
+						material.directionalMagnitude = 0.5;
 					}
 				}
 		};
