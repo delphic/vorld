@@ -105,17 +105,53 @@ let Mesher = module.exports = (function(){
 		}
 	};
 
+	let calculateLightLevel = (vorld, vertex, direction, i, j, k, chunkI, chunkJ, chunkK) => {
+		// For - non-smooth just return adj block light value
+		aov[0] = Math.round(2 * (vertex[0] - i - 0.5));
+		aov[1] = Math.round(2 * (vertex[1] - j - 0.5));
+		aov[2] = Math.round(2 * (vertex[2] - k - 0.5));
+		let adj = 0, side0 = 0, side1 = 0, corner = 0;
+		switch(direction)
+		{
+			case Cardinal.Direction.up:
+			case Cardinal.Direction.down:
+				adj = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k) | 0;
+				side0 = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k) | 0;
+				side1 = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k + aov[2]) | 0;
+				corner = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2]) | 0;
+				break;
+			case Cardinal.Direction.forward:
+			case Cardinal.Direction.back:
+				adj = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j, k + aov[2]) | 0;
+				side0 = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k + aov[2]) | 0;
+				side1 = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k + aov[2]) | 0;
+				corner = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2]) | 0;
+				break;
+			case Cardinal.Direction.left:
+			case Cardinal.Direction.right:
+				adj = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k) | 0;
+				side0 = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k + aov[2]) | 0;
+				side1 = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k) | 0;
+				corner = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2]) | 0;
+				break;
+		}
+		return Math.max(adj, side0, side1, corner);
+	}
+
 	let addQuadToMesh = function(mesh, vorld, atlas, block, rotation, direction, i, j, k, chunkI, chunkJ, chunkK, offsetMagnitude) {
 		let tile, offset, n = mesh.vertices.length / 3;
 		let vertices, normals, textureCoordinates;
 
 		let localDirection = Cardinal.reverseTransformDirection(direction, rotation);
 
+		let blockDef = Vorld.getBlockTypeDefinition(vorld, block);
 		tile = getTileIndexFromAtlas(atlas, block, localDirection);
 
 		offset = localDirection * 12;
 		vertices = cubeJson.vertices.slice(offset, offset + 12);
 		
+		let lightBake = [];
+
 		let tileIndices = [ tile, tile, tile, tile ];
 		let vector = [];
 		for (let index = 0; index < 4; index++) {
@@ -125,6 +161,16 @@ let Mesher = module.exports = (function(){
 			
 			Utils.transformPointToVorldSpace(vector, rotation, i, j, k);
 			tileIndices[index] += calculateAOLevel(vorld, vector, direction, i, j, k, chunkI, chunkJ, chunkK);
+
+			let light = 0;
+				if (blockDef && blockDef.light) {
+					// Use own light if a light emitting block
+					light = blockDef.light;
+				} else {
+					// else get the adjacent blocks light
+					light = calculateLightLevel(vorld, vector, direction, i , j, k, chunkI, chunkJ, chunkK);
+				}
+				lightBake.push(light / 15);
 
 			if (offsetMagnitude) {
 				Cardinal.getVectorFromDirection(offsetVector, direction);
@@ -161,6 +207,7 @@ let Mesher = module.exports = (function(){
 		concat(mesh.normals, normals);
 		concat(mesh.textureCoordinates, textureCoordinates);
 		concat(mesh.tileIndices, tileIndices);
+		concat(mesh.lightBake, lightBake);
 		mesh.indices.push(n,n+1,n+2, n,n+2,n+3);
 	};
 
@@ -170,7 +217,10 @@ let Mesher = module.exports = (function(){
 		// concat into mesh
 		let n = mesh.vertices.length / 3;
 		let vertices = [], normals = [], tileIndices = [], indices = [];
-		
+
+		let blockDef = Vorld.getBlockTypeDefinition(vorld, block);
+		let lightBake = [];
+
 		let vertex = [], normal = [];
 		for (let index = 0, l = customMesh.vertices.length; index < l; index += 3) {
 			vertex[0] = customMesh.vertices[index];
@@ -210,6 +260,19 @@ let Mesher = module.exports = (function(){
 				Maths.snapVector(normal);
 			}
 
+			let light = 0;
+			if (blockDef && blockDef.light) {
+				// Use own light if a light emitting block
+				light = blockDef.light;
+			} else {
+				// else get the adjacent blocks light
+				// light = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + normal[0], j + normal[1], k + normal[2]);
+				// NOTE: assumes normal is axis aligned unit vector
+				// TODO: Should both this and AOLevel above calculate from transformed normal instead?
+				light = calculateLightLevel(vorld, vertex, direction, i , j, k, chunkI, chunkJ, chunkK);
+			}
+			lightBake.push(light / 15);
+
 			normals[index] = normal[0];
 			normals[index + 1] = normal[1];
 			normals[index + 2] = normal[2];
@@ -223,6 +286,7 @@ let Mesher = module.exports = (function(){
 		concat(mesh.normals, normals);
 		concat(mesh.textureCoordinates, customMesh.textureCoordinates);
 		concat(mesh.tileIndices, tileIndices);
+		concat(mesh.lightBake, lightBake);
 		concat(mesh.indices, indices);
 	};
 
@@ -246,8 +310,12 @@ let Mesher = module.exports = (function(){
 			normals: [],
 			textureCoordinates: [],
 			tileIndices: [],
+			lightBake: [],
 			indices: [],
-			customAttributes: [{ name: "tileBuffer", source: "tileIndices", size: 1 }]
+			customAttributes: [
+				{ name: "tileBuffer", source: "tileIndices", size: 1 },
+				{ name: "lightBuffer", source: "lightBake", size: 1 }
+			]
 		};
 
 		let chunkI = chunk.indices[0],

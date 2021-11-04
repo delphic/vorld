@@ -43,9 +43,11 @@ let Vorld = module.exports = (function() {
 		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
 		if (!chunk) {
 			chunk = Chunk.create({ size: vorld.chunkSize });
-			Vorld.addChunk(vorld, chunk, chunkI, chunkJ, chunkK);
+			exports.addChunk(vorld, chunk, chunkI, chunkJ, chunkK);
 		}
+		let previousBlock = Chunk.getBlock(chunk, blockI, blockJ, blockK);
 		Chunk.addBlock(chunk, blockI, blockJ, blockK, block, up, forward);
+		updateLightForBlock(vorld, x, y, z, previousBlock, block);
 	};
 
 	exports.getBlock = function(vorld, x, y, z) {
@@ -83,7 +85,7 @@ let Vorld = module.exports = (function() {
 			chunkK -= 1;
 		}
 
-		let chunk = Vorld.getChunk(vorld, chunkI, chunkJ, chunkK);
+		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
 		if (chunk) {
 			return Chunk.getBlock(chunk, blockI, blockJ, blockK);
 		}
@@ -98,7 +100,7 @@ let Vorld = module.exports = (function() {
 		let blockI = x - (chunkI * size),
 			blockJ = y - (chunkJ * size),
 			blockK = z - (chunkK * size);
-		let chunk = Vorld.getChunk(vorld, chunkI, chunkJ, chunkK);
+		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
 		if (chunk) {
 			return Chunk.getBlockUp(chunk, blockI, blockJ, blockK);
 		}
@@ -113,7 +115,7 @@ let Vorld = module.exports = (function() {
 		let blockI = x - (chunkI * size),
 			blockJ = y - (chunkJ * size),
 			blockK = z - (chunkK * size);
-		let chunk = Vorld.getChunk(vorld, chunkI, chunkJ, chunkK);
+		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
 		if (chunk) {
 			return Chunk.getBlockForward(chunk, blockI, blockJ, blockK);
 		}
@@ -128,7 +130,7 @@ let Vorld = module.exports = (function() {
 		let blockI = x - (chunkI * size),
 			blockJ = y - (chunkJ * size),
 			blockK = z - (chunkK * size);
-		let chunk = Vorld.getChunk(vorld, chunkI, chunkJ, chunkK);
+		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
 		if (chunk) {
 			return Chunk.getBlockRotation(chunk, blockI, blockJ, blockK);
 		}
@@ -159,12 +161,15 @@ let Vorld = module.exports = (function() {
 			chunkK -= 1;
 		}
 
-		let chunk = Vorld.getChunk(vorld, chunkI, chunkJ, chunkK);
+		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
 		if (!chunk) {
 			chunk = Chunk.create({ size: vorld.chunkSize });
-			Vorld.addChunk(vorld, chunk, chunkI, chunkJ, chunkK);
+			exports.addChunk(vorld, chunk, chunkI, chunkJ, chunkK);
 		}
+		let previousBlock = Chunk.getBlock(chunk, blockI, blockJ, blockK);
 		Chunk.addBlock(chunk, blockI, blockJ, blockK, block, up, forward);
+		let x = chunkI * vorld.chunkSize + blockI, y = chunkJ * vorld.chunkSize + blockJ, z = chunkK * vorld.chunkSize + blockK;
+		updateLightForBlock(vorld, x, y, z, previousBlock, block);
 	};
 
 	exports.isBlockSolid = function(vorld, x, y, z) {
@@ -213,6 +218,231 @@ let Vorld = module.exports = (function() {
 		return null;
 	};
 
+	// Lighting
+	let getBlockLight = exports.getBlockLight = function(vorld, x, y, z) {
+		let size = vorld.chunkSize;
+		let chunkI = Math.floor(x / size),
+			chunkJ = Math.floor(y / size),
+			chunkK = Math.floor(z / size);
+		let blockI = x - (chunkI * size),
+			blockJ = y - (chunkJ * size),
+			blockK = z - (chunkK * size);
+		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
+		if (chunk) {
+			return Chunk.getBlockLight(chunk, blockI, blockJ, blockK);
+		}
+		return 0;
+	}
+
+	exports.getBlockLightByIndex = function(vorld, chunkI, chunkJ, chunkK, blockI, blockJ, blockK) {
+		if (blockI >= vorld.chunkSize) {
+			blockI = blockI - vorld.chunkSize;
+			chunkI += 1;
+		} else if (blockI < 0) {
+			blockI = vorld.chunkSize + blockI;
+			chunkI -= 1;
+		}
+		if (blockJ >= vorld.chunkSize) {
+			blockJ = blockJ - vorld.chunkSize;
+			chunkJ += 1;
+		} else if (blockJ < 0) {
+			blockJ = vorld.chunkSize + blockJ;
+			chunkJ -= 1;
+		}
+		if (blockK >= vorld.chunkSize) {
+			blockK = blockK - vorld.chunkSize;
+			chunkK += 1;
+		} else if (blockK < 0) {
+			blockK = vorld.chunkSize + blockK;
+			chunkK -= 1;
+		}
+		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
+		if (chunk) {
+			return Chunk.getBlockLight(chunk, blockI, blockJ, blockK);
+		}
+		return 0;
+	};
+
+	let VectorQueue = require('./vectorQueue');
+	let popogationQueue = VectorQueue.create();
+	let removalQueue = VectorQueue.create();
+
+	let updateLightForBlock = function(vorld, x, y, z, previousBlock, newBlock) {
+		let prevBlockDef = vorld.blockConfig ? vorld.blockConfig[previousBlock] : null;
+		if (prevBlockDef && prevBlockDef.light) {
+			removeLight(vorld, x, y, z, removalQueue, popogationQueue);
+		}
+
+		let newBlockDef = vorld.blockConfig ? vorld.blockConfig[newBlock] : null;
+		if (newBlockDef && newBlockDef.light) {
+			addLight(vorld, x, y, z, newBlockDef.light);
+		} else if (!newBlock || (newBlockDef && !newBlockDef.isOpaque)) {
+			buildAdjacentLightQueue(popogationQueue, vorld, x, y, z);
+			if (popogationQueue.length) {
+				propogateLight(vorld, popogationQueue);
+			}
+		} else if ((newBlockDef && newBlockDef.isOpaque) || (newBlockDef && !newBlockDef)) {
+			// TODO: Maybe check that there is any light in this location before removing it
+			// That would be more straight forward - also this seems to get called when placing new blocks in generation stage which is overkill
+			removeLight(vorld, x, y, z, removalQueue, popogationQueue);
+		}
+	};
+
+	let buildAdjacentLightQueue = function(queue, vorld, x, y, z) {
+		if (getBlockLight(vorld, x + 1, y, z)) {
+			queue.push(x + 1, y, z);
+		}
+		if (getBlockLight(vorld, x - 1, y, z)) {
+			queue.push(x - 1, y, z);
+		}
+		if (getBlockLight(vorld, x, y + 1, z)) {
+			queue.push(x, y + 1, z);
+		}
+		if (getBlockLight(vorld, x, y - 1, z)) {
+			queue.push(x, y - 1, z);
+		}
+		if (getBlockLight(vorld, x, y, z + 1)) {
+			queue.push(x, y, z + 1);
+		}
+		if (getBlockLight(vorld, x, y, z - 1)) {
+			queue.push(x, y, z - 1);
+		}
+	};
+
+	let addLight = function(vorld, x, y, z, light) {
+		let queue = popogationQueue;
+		if (light > 0 && trySetLightForBlock(vorld, x, y, z, light)) {
+			queue.push(x, y, z);
+			propogateLight(vorld, queue)
+		}
+	};
+
+	let removeLight = function(vorld, x, y, z, queue, backfillQueue) {
+		queue.push(x, y, z);
+		while (queue.length) {
+			let pos = queue.pop();
+			let neighbourLight = 0;
+			let light = getBlockLight(vorld, pos[0], pos[1], pos[2]);
+			
+			neighbourLight = getBlockLight(vorld, pos[0] + 1, pos[1], pos[2]);
+			if (neighbourLight && neighbourLight < light) {
+				queue.push(pos[0] + 1, pos[1], pos[2]);
+			} else if (neighbourLight) {
+				backfillQueue.push(pos[0] + 1, pos[1], pos[2]);
+			}
+			neighbourLight = getBlockLight(vorld, pos[0] - 1, pos[1], pos[2]);
+			if (neighbourLight && neighbourLight < light) {
+				queue.push(pos[0] - 1, pos[1], pos[2]);
+			} else if (neighbourLight) {
+				backfillQueue.push(pos[0] - 1, pos[1], pos[2]);
+			}
+			neighbourLight = getBlockLight(vorld, pos[0], pos[1] + 1, pos[2]);
+			if (neighbourLight && neighbourLight < light) {
+				queue.push(pos[0], pos[1] + 1, pos[2]);
+			} else if (neighbourLight) {
+				backfillQueue.push(pos[0], pos[1] + 1, pos[2]);
+			}
+			neighbourLight = getBlockLight(vorld, pos[0], pos[1] - 1, pos[2]);
+			if (neighbourLight && neighbourLight < light) {
+				queue.push(pos[0], pos[1] - 1, pos[2]);
+			} else if (neighbourLight) {
+				backfillQueue.push(pos[0], pos[1] - 1, pos[2]);
+			}
+			neighbourLight = getBlockLight(vorld, pos[0], pos[1], pos[2] + 1);
+			if (neighbourLight && neighbourLight < light) {
+				queue.push(pos[0], pos[1], pos[2] + 1);
+			} else if (neighbourLight) {
+				backfillQueue.push(pos[0], pos[1], pos[2] + 1);
+			}
+			neighbourLight = getBlockLight(vorld, pos[0], pos[1], pos[2] - 1);
+			if (neighbourLight && neighbourLight < light) {
+				queue.push(pos[0], pos[1], pos[2] - 1);
+			} else if (neighbourLight) {
+				backfillQueue.push(pos[0], pos[1], pos[2] - 1);
+			}
+
+			removeLightForBlock(vorld, pos[0], pos[1], pos[2]);
+		}
+		queue.reset();
+
+		if (backfillQueue.length > 0) {
+			propogateLight(vorld, backfillQueue);
+		}
+	};
+
+	let propogateLight = function(vorld, queue) {
+		while (queue.length) {
+			let pos = queue.pop();
+			let light = getBlockLight(vorld, pos[0], pos[1], pos[2]);
+			if (light > 1) {
+				if (trySetLightForBlock(vorld, pos[0] + 1, pos[1], pos[2], light - 1)) {
+					queue.push(pos[0] + 1, pos[1], pos[2]);
+				}
+				if (trySetLightForBlock(vorld, pos[0] - 1, pos[1], pos[2], light - 1)) {
+					queue.push(pos[0] - 1, pos[1], pos[2]);
+				}
+				if (trySetLightForBlock(vorld, pos[0], pos[1] + 1, pos[2], light - 1)) {
+					queue.push(pos[0], pos[1] + 1, pos[2]);
+				}
+				if (trySetLightForBlock(vorld, pos[0],  pos[1] - 1, pos[2], light - 1)) {
+					queue.push(pos[0], pos[1] - 1, pos[2]);
+				}
+				if (trySetLightForBlock(vorld, pos[0], pos[1], pos[2] + 1, light - 1)) {
+					queue.push(pos[0], pos[1], pos[2] + 1);
+				}
+				if (trySetLightForBlock(vorld, pos[0], pos[1], pos[2] - 1, light - 1)) {
+					queue.push(pos[0], pos[1], pos[2] - 1);
+				}
+			}
+		}
+		queue.reset();
+	};
+
+	let trySetLightForBlock = function(vorld, x, y, z, light) {
+		let size = vorld.chunkSize;
+		let chunkI = Math.floor(x / size),
+			chunkJ = Math.floor(y / size),
+			chunkK = Math.floor(z / size);
+		let blockI = x - (chunkI * size),
+			blockJ = y - (chunkJ * size),
+			blockK = z - (chunkK * size);
+
+		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
+		let currentLight = 0, blockDef = null;
+		if (!chunk) {
+			chunk = Chunk.create({ size: vorld.chunkSize });
+			exports.addChunk(vorld, chunk, chunkI, chunkJ, chunkK);
+		} else {
+			block = Chunk.getBlock(chunk, blockI, blockJ, blockK);
+			if (block && vorld.blockConfig) {
+				blockDef = vorld.blockConfig[block]; 
+			}
+			currentLight = Chunk.getBlockLight(chunk, blockI, blockJ, blockK);
+		}
+		if ((!blockDef || !blockDef.isOpaque) && (!currentLight || light >= currentLight)) {
+			// TODO: Pass through modifers rather than just !isOpaque
+			Chunk.setBlockLight(chunk, blockI, blockJ, blockK, light);
+			return true;
+		}
+		return false;
+	};
+
+	let removeLightForBlock = function(vorld, x, y, z) {
+		let size = vorld.chunkSize;
+		let chunkI = Math.floor(x / size),
+			chunkJ = Math.floor(y / size),
+			chunkK = Math.floor(z / size);
+		let blockI = x - (chunkI * size),
+			blockJ = y - (chunkJ * size),
+			blockK = z - (chunkK * size);
+			
+		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
+		if (chunk) {
+			Chunk.setBlockLight(chunk, blockI, blockJ, blockK, 0);
+		}
+	}
+
+	// Utils
 	exports.forEachChunk = function(vorld, delegate) {
 		let chunks = vorld.chunks;
 		let keys = Object.keys(chunks);
@@ -261,6 +491,7 @@ let Vorld = module.exports = (function() {
 		vorld.chunks = {};
 	}
 
+	// Constructor
 	exports.create = function(parameters) {
 		var vorld = {};
 		if (parameters && parameters.chunkSize) {

@@ -23,6 +23,7 @@ let VoxelShader = module.exports = (function() {
 				"in vec2 aTextureCoord;",
 				"in vec3 aVertexNormal;",
 				"in float aTileIndex;",
+				"in float aLightLevel;",
 
 				"uniform mat4 uMVMatrix;",
 				"uniform mat4 uPMatrix;",
@@ -46,7 +47,9 @@ let VoxelShader = module.exports = (function() {
 					"vViewSpacePosition = (uMVMatrix * vec4(aVertexPosition, 1.0)).xyz;",
 
 					"float aoFactor = 1.0 - 0.25 * 1.333333 * fract(aTileIndex);", // 4/3 converts from 0 -> 0.75 to 0 -> 1, 0.5 reduces the impact
-					"vLightWeight = (uAmbientLightMagnitude + uDirectionalLightMagnitude * max(dot(aVertexNormal, normalize(vec3(-1.0, 2.0, 1.0))), 0.0)) * aoFactor;",
+					"float halfLambert = (uAmbientLightMagnitude + uDirectionalLightMagnitude * max(dot(aVertexNormal, normalize(vec3(-1.0, 2.0, 1.0))), 0.0));",
+					
+					"vLightWeight = max(halfLambert, aLightLevel) * aoFactor;",
 				"}"].join('\n');
 		},
 		fs: function(cutoutThreshold) {
@@ -96,7 +99,7 @@ let VoxelShader = module.exports = (function() {
 		let shader = {
 			vsSource: vsSource,
 			fsSource: fsSource,
-				attributeNames: [ "aVertexPosition", "aVertexNormal", "aTextureCoord", "aTileIndex" ],
+				attributeNames: [ "aVertexPosition", "aVertexNormal", "aTextureCoord", "aTileIndex", "aLightLevel" ],
 				uniformNames: [ "uMVMatrix", "uPMatrix", "uSampler", "uFogColor", "uFogDensity", "uAmbientLightMagnitude", "uDirectionalLightMagnitude" ],
 				textureUniformNames: [ "uSampler" ],
 				pMatrixUniformName: "uPMatrix",
@@ -106,6 +109,7 @@ let VoxelShader = module.exports = (function() {
 					this.enableAttribute("aTextureCoord");
 					this.enableAttribute("aVertexNormal");
 					this.enableAttribute("aTileIndex");
+					this.enableAttribute("aLightLevel");
 					this.setUniformFloat("uAmbientLightMagnitude", material.ambientMagnitude);
 					this.setUniformFloat("uDirectionalLightMagnitude", material.directionalMagnitude)
 					this.setUniformFloat3("uFogColor", material.fogColor[0], material.fogColor[1], material.fogColor[2]);
@@ -116,6 +120,7 @@ let VoxelShader = module.exports = (function() {
 					this.setAttribute("aTextureCoord", mesh.textureBuffer);
 					this.setAttribute("aVertexNormal", mesh.normalBuffer);
 					this.setAttribute("aTileIndex", mesh.tileBuffer);
+					this.setAttribute("aLightLevel", mesh.lightBuffer);
 					this.setIndexedAttribute(mesh.indexBuffer);
 				},
 				validateMaterial: function(material) {

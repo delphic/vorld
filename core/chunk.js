@@ -23,6 +23,11 @@ let Chunk = module.exports = (function() {
 		}
 		chunk.blockRotations[index] = Cardinal.getCardinalRotation(up, forward);
 	};
+
+	exports.setBlockLight = function(chunk, i, j, k, light) {
+		let index = i + chunk.size * j + chunk.size *chunk.size * k;
+		chunk.blockLighting[index] = light;
+	}
 	
 	exports.getBlock = function(chunk, i, j, k) {
 		if (i < 0 || j < 0 || k < 0 || i >= chunk.size || j >= chunk.size || k >= chunk.size) {
@@ -55,6 +60,15 @@ let Chunk = module.exports = (function() {
 		return chunk.blockRotations[index];
 	}
 
+	exports.getBlockLight = function(chunk, i, j, k) {
+		let index = i + chunk.size * j + chunk.size * chunk.size * k;
+		if (i < 0 || j < 0 || k < 0 || i >= chunk.size || j >= chunk.size || k >= chunk.size) {
+			return null;
+		}
+		// Currently expect values 0 to 15
+		return chunk.blockLighting[index];
+	};
+
 	exports.create = function(parameters) {
 		let chunk = {};
 		if (parameters && parameters.size) {
@@ -71,6 +85,11 @@ let Chunk = module.exports = (function() {
 			chunk.blockRotations = parameters.blockRotations;
 		} else {
 			chunk.blockRotations = [];
+		}
+		if (parameters && parameters.blockLighting) {
+			chunk.blockLighting = parameters.blockLighting;
+		} else {
+			chunk.blockLighting = [];
 		}
 		return chunk;
 	};
