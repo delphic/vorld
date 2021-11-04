@@ -118,21 +118,21 @@ let Mesher = module.exports = (function(){
 				adj = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k) | 0;
 				side0 = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k) | 0;
 				side1 = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k + aov[2]) | 0;
-				corner = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2]) | 0;
+				corner = !side0 && !side1 ? 0 : Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2]) | 0;
 				break;
 			case Cardinal.Direction.forward:
 			case Cardinal.Direction.back:
 				adj = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j, k + aov[2]) | 0;
 				side0 = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k + aov[2]) | 0;
 				side1 = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k + aov[2]) | 0;
-				corner = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2]) | 0;
+				corner = !side0 && !side1 ? 0 : Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2]) | 0;
 				break;
 			case Cardinal.Direction.left:
 			case Cardinal.Direction.right:
 				adj = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k) | 0;
 				side0 = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k + aov[2]) | 0;
 				side1 = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k) | 0;
-				corner = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2]) | 0;
+				corner = !side0 && !side1 ? 0 : Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2]) | 0;
 				break;
 		}
 		return Math.max(adj, side0, side1, corner);
