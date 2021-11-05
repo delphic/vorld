@@ -234,6 +234,15 @@ let Vorld = module.exports = (function() {
 		return 0;
 	}
 
+	let getBlockAttenuation = function(vorld, x, y, z) {
+		let block = exports.getBlock(vorld, x, y, z);
+		let def = exports.getBlockTypeDefinition(vorld, block);
+		if (def && def.attenuation) {
+			return def.attenuation;
+		}
+		return 1;
+	}
+
 	exports.getBlockLightByIndex = function(vorld, chunkI, chunkJ, chunkK, blockI, blockJ, blockK) {
 		if (blockI >= vorld.chunkSize) {
 			blockI = blockI - vorld.chunkSize;
@@ -268,12 +277,20 @@ let Vorld = module.exports = (function() {
 	let removalQueue = VectorQueue.create();
 
 	let updateLightForBlock = function(vorld, x, y, z, previousBlock, newBlock) {
-		let prevBlockDef = vorld.blockConfig ? vorld.blockConfig[previousBlock] : null;
-		if (prevBlockDef && prevBlockDef.light) {
+		let prevLightLevel = getBlockLight(vorld, x, y, z);
+		let prevBlockDef = vorld.blockConfig ? vorld.blockConfig[previousBlock] : null; 
+		let newBlockDef = vorld.blockConfig ? vorld.blockConfig[newBlock] : null;
+		let newLight = newBlockDef && newBlockDef.light ? newBlockDef.light : 0; 
+		if ((!prevBlockDef || !prevBlockDef.light) 
+			&& newBlockDef && newLight == 0 && !newBlockDef.isOpaque) {
+			let attenuation = newBlockDef.attenuation || 1;
+			newLight = prevLightLevel - (attenuation - 1);
+			// Note - is overzealous for cases where prev attenuation > 1
+		}
+		if (prevLightLevel > newLight) {
 			removeLight(vorld, x, y, z, removalQueue, popogationQueue);
 		}
 
-		let newBlockDef = vorld.blockConfig ? vorld.blockConfig[newBlock] : null;
 		if (newBlockDef && newBlockDef.light) {
 			addLight(vorld, x, y, z, newBlockDef.light);
 		} else if (!newBlock || (newBlockDef && !newBlockDef.isOpaque)) {
@@ -281,10 +298,6 @@ let Vorld = module.exports = (function() {
 			if (popogationQueue.length) {
 				propogateLight(vorld, popogationQueue);
 			}
-		} else if ((newBlockDef && newBlockDef.isOpaque) || (newBlockDef && !newBlockDef)) {
-			// TODO: Maybe check that there is any light in this location before removing it
-			// That would be more straight forward - also this seems to get called when placing new blocks in generation stage which is overkill
-			removeLight(vorld, x, y, z, removalQueue, popogationQueue);
 		}
 	};
 
@@ -373,24 +386,24 @@ let Vorld = module.exports = (function() {
 	let propogateLight = function(vorld, queue) {
 		while (queue.length) {
 			let pos = queue.pop();
-			let light = getBlockLight(vorld, pos[0], pos[1], pos[2]);
-			if (light > 1) {
-				if (trySetLightForBlock(vorld, pos[0] + 1, pos[1], pos[2], light - 1)) {
+			let light = getBlockLight(vorld, pos[0], pos[1], pos[2]) - getBlockAttenuation(vorld, pos[0], pos[1], pos[2]);
+			if (light > 0) {
+				if (trySetLightForBlock(vorld, pos[0] + 1, pos[1], pos[2], light)) {
 					queue.push(pos[0] + 1, pos[1], pos[2]);
 				}
-				if (trySetLightForBlock(vorld, pos[0] - 1, pos[1], pos[2], light - 1)) {
+				if (trySetLightForBlock(vorld, pos[0] - 1, pos[1], pos[2], light)) {
 					queue.push(pos[0] - 1, pos[1], pos[2]);
 				}
-				if (trySetLightForBlock(vorld, pos[0], pos[1] + 1, pos[2], light - 1)) {
+				if (trySetLightForBlock(vorld, pos[0], pos[1] + 1, pos[2], light)) {
 					queue.push(pos[0], pos[1] + 1, pos[2]);
 				}
-				if (trySetLightForBlock(vorld, pos[0],  pos[1] - 1, pos[2], light - 1)) {
+				if (trySetLightForBlock(vorld, pos[0], pos[1] - 1, pos[2], light)) {
 					queue.push(pos[0], pos[1] - 1, pos[2]);
 				}
-				if (trySetLightForBlock(vorld, pos[0], pos[1], pos[2] + 1, light - 1)) {
+				if (trySetLightForBlock(vorld, pos[0], pos[1], pos[2] + 1, light)) {
 					queue.push(pos[0], pos[1], pos[2] + 1);
 				}
-				if (trySetLightForBlock(vorld, pos[0], pos[1], pos[2] - 1, light - 1)) {
+				if (trySetLightForBlock(vorld, pos[0], pos[1], pos[2] - 1, light)) {
 					queue.push(pos[0], pos[1], pos[2] - 1);
 				}
 			}
