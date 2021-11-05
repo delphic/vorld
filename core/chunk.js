@@ -9,6 +9,13 @@ let Cardinal = require('./cardinal');
 
 let Chunk = module.exports = (function() {
 	let exports = {};
+
+	// Whilst we're not preallocating the entire array if we were to key as
+	// i + chunk.size * k + chunk.size * chunk.size + j
+	// our sparse arrays would have more empty space and probably take less memory
+	// due to the fact there will be a significant number of chunks where there
+	// are continuous rows of horizontal planes rows at the top than there are
+	// x/y vertical planes on the z+ side.
 	
 	exports.addBlock = function(chunk, i, j, k, block, up, forward) {
 		let index = i + chunk.size * j + chunk.size * chunk.size * k;

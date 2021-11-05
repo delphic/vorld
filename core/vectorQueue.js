@@ -1,6 +1,12 @@
 let VectorQueue = module.exports = (function(){
 	let exports = {};
 
+	// Could remove the need for a string key if on initialising the queue
+	// we set a maximum search distance, we can then make first values - maximum 
+	// search distance our origin, put positions into this coordinate space (all positive)
+	// and generate key as x + z * 2 * search distance + y * (2 * search distance) ^ 2
+	// would want to test performance, building the string is probably faster but allocates garbage
+
 	exports.create = () => {
 		let queue = {};
 		queue.length = 0;
