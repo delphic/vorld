@@ -185,17 +185,21 @@ let Mesher = module.exports = (function(){
 			vector[2] = vertices[3*index + 2];
 			
 			Utils.transformPointToVorldSpace(vector, rotation, i, j, k);
-			tileIndices[index] += calculateAOLevel(vorld, vector, direction, i, j, k, chunkI, chunkJ, chunkK);
 
+			// NOTE: lighting and AO as done with placement direction not normal converted to direction,
+			// back faces take the light level from behind them this however has quite a nice effect on
+			// leaves / cutout block making them more readable, as if they are catching the light / imples 
+			// they aren't flat so am  leaving this here rather than moving the calculation to normals
+			tileIndices[index] += calculateAOLevel(vorld, vector, direction, i, j, k, chunkI, chunkJ, chunkK);
 			let light = 0;
-				if (blockDef && blockDef.light) {
-					// Use own light if a light emitting block
-					light = blockDef.light;
-				} else {
-					// else get the adjacent blocks light
-					light = calculateLightLevel(vorld, vector, direction, i , j, k, chunkI, chunkJ, chunkK);
-				}
-				lightBake.push(light / 15);
+			if (blockDef && blockDef.light) {
+				// Use own light if a light emitting block
+				light = blockDef.light;
+			} else {
+				// else get the adjacent blocks light
+				light = calculateLightLevel(vorld, vector, direction, i , j, k, chunkI, chunkJ, chunkK);
+			}
+			lightBake.push(light / 15);
 
 			if (offsetMagnitude) {
 				Cardinal.getVectorFromDirection(offsetVector, direction);
@@ -277,13 +281,18 @@ let Mesher = module.exports = (function(){
 
 			let direction = Cardinal.getDirectionFromVector(normal);
 			let tileIndex = getTileIndexFromAtlas(atlas, block, direction);
-			tileIndex += calculateAOLevel(vorld, vertex, direction, i, j, k, chunkI, chunkJ, chunkK);
-			tileIndices.push(tileIndex);
 
 			if (rotation) {
 				Cardinal.transformVector(normal, rotation);
 				Maths.snapVector(normal);
 			}
+
+			// Update direction to rotated normal
+			direction = Cardinal.getDirectionFromVector(normal);
+
+			// Calculate AO and pack into tileIndex 
+			tileIndex += calculateAOLevel(vorld, vertex, direction, i, j, k, chunkI, chunkJ, chunkK);
+			tileIndices.push(tileIndex);
 
 			let light = 0;
 			if (blockDef && blockDef.light) {
