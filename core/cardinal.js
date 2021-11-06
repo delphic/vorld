@@ -12,6 +12,17 @@ let Cardinal = module.exports = (function() {
 		left: 5
 	};
 
+	exports.getDirectionDescription = (direction) => {
+		switch(direction) {
+			case Direction.forward: return "forward";
+			case Direction.back: return "back";
+			case Direction.up: return "up";
+			case Direction.down: return "down";
+			case Direction.right: return "right";
+			case Direction.left: return "left";
+		}
+	};
+
 	// Enum of all cardinal aligned rotations - could do clever maths but this is more readable and probably more performant
 	// In the form of YZ localY -> global (with x implicit and dependent on handedness), e.g. LeftBack => local up = global left, local forward = global back
 	// In order of a given y direction, rotating then rotating clockwise around local y, implicit right direction in comment
@@ -245,10 +256,10 @@ let Cardinal = module.exports = (function() {
 	};
 
 	// Lookup tables for quaternion elements
-	let qx = [0, 0, 0, 0, 0, 0.5, Math.SQRT1_2, 0.5, 0, Math.SQRT1_2, 1, Math.SQRT1_2, 0, -0.5, -Math.SQRT1_2, -0.5, Math.SQRT1_2, 0.5, 0, -0.5, 0, 0.5, Math.SQRT1_2, -0.5];
-	let qy = [0, Math.SQRT1_2, 1, Math.SQRT1_2, 0, -0.5, -Math.SQRT1_2, -0.5, 0, 0, 0, 0, 0, -0.5, -Math.SQRT1_2, -0.5, 0, 0.5, Math.SQRT1_2, 0.5, Math.SQRT1_2, 0.5, 0, 0.5];
-	let qz = [0, 0, 0, 0, Math.SQRT1_2, 0.5, 0, -0.5, 1, Math.SQRT1_2, 0, -Math.SQRT1_2, Math.SQRT1_2, 0.5, 0, -0.5, 0, 0.5, Math.SQRT1_2, 0.5, -Math.SQRT1_2, -0.5, 0, -0.5];
-	let qw = [1, Math.SQRT1_2, 0, -Math.SQRT1_2, Math.SQRT1_2, 0.5, 0, -0.5, 0, 0, 0, -0, -Math.SQRT1_2, -0.5, -0, 0.5, Math.SQRT1_2, 0.5, 0, -0.5, -0, -0.5, -Math.SQRT1_2, 0.5];
+	let qx = [0, 0, 0, 0, 0, -0.5, -Math.SQRT1_2, -0.5, 0, Math.SQRT1_2, 1, Math.SQRT1_2, 0, 0.5, Math.SQRT1_2, 0.5, Math.SQRT1_2, 0.5, 0, -0.5, Math.SQRT1_2, -0.5, 0, 0.5];
+	let qy = [0, Math.SQRT1_2, 1, Math.SQRT1_2, 0, -0.5, -Math.SQRT1_2, -0.5, 0, 0, 0, 0, 0, -0.5, -Math.SQRT1_2, -0.5, 0, 0.5, Math.SQRT1_2, 0.5, 0, 0.5, Math.SQRT1_2, 0.5];
+	let qz = [0, 0, 0, 0, Math.SQRT1_2, 0.5, 0, -0.5, 1, -Math.SQRT1_2, 0, Math.SQRT1_2, Math.SQRT1_2, -0.5, 0, 0.5, 0, 0.5, Math.SQRT1_2, 0.5, 0, -0.5, -Math.SQRT1_2, -0.5];
+	let qw = [1, Math.SQRT1_2, 0, -Math.SQRT1_2, -Math.SQRT1_2, -0.5, -0, 0.5, 0, -0, 0, 0, Math.SQRT1_2, -0.5, 0, 0.5, Math.SQRT1_2, 0.5, 0, -0.5, -Math.SQRT1_2, 0.5, -0, -0.5];
 
 	let getQuatFromRotation = exports.getQuatFromRotation = (out, rotation) => {
 		out[0] = qx[rotation];
