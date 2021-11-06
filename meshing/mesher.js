@@ -50,14 +50,29 @@ let Mesher = module.exports = (function(){
 	};
 
 	let getTileIndexFromAtlas = (atlas, block, direction) => {
-		if (direction == Direction.up) {
-			tile = (atlas.textureArraySize - 1) - atlas.blockToTileIndex[block].top;
-		} else if (direction == Direction.down) {
-			tile = (atlas.textureArraySize - 1) - atlas.blockToTileIndex[block].bottom;
-		} else {
-			tile = (atlas.textureArraySize - 1) - atlas.blockToTileIndex[block].side;
+		let tileId = 0;
+		let map = atlas.blockToTileIndex[block];
+		switch (direction) {
+			case Direction.up:
+				tileId = map.top !== undefined ? map.top : map.side;
+				break;
+			case Direction.down:
+				tileId = map.bottom !== undefined ? map.bottom : map.side;
+				break;
+			case Direction.forward:
+				tileId = map.forward !== undefined ? map.forward : map.side;
+				break;
+			case Direction.back:
+				tileId = map.back !== undefined ? map.back : map.side;
+				break;
+			case Direction.left:
+				tileId = map.left !== undefined ? map.left : map.side;
+				break;
+			case Direction.right:
+				tileId = map.right !== undefined ? map.right : map.side; 
+				break;
 		}
-		return tile;
+		return (atlas.textureArraySize - 1) - tileId;
 	};
 
 	let aov = [];
