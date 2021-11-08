@@ -40,13 +40,22 @@ let Vorld = module.exports = (function() {
 		let blockI = x - (chunkI * size),
 			blockJ = y - (chunkJ * size),
 			blockK = z - (chunkK * size);
-		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
-		if (!chunk) {
-			chunk = Chunk.create({ size: vorld.chunkSize });
-			exports.addChunk(vorld, chunk, chunkI, chunkJ, chunkK);
+		
+		let previousBlock = exports.getBlockByIndex(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK);
+		let previousYMax = getHighestBlockY(vorld, x, z);
+		exports.setBlockByIndex(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK, block, up, forward);
+		// Update Sunlight
+		if (block) {
+			if (previousYMax !== undefined) {
+				if (previousYMax < y) {
+					removeSunlight(vorld, x, y, z, removalQueue, propagationQueue);
+				}
+			} else {
+				removeSunlight(vorld, x, y, z, removalQueue, propagationQueue);
+			}
+		} else if (y == previousYMax) {
+			propagateSunlight(vorld, x, previousYMax + 1, z);
 		}
-		let previousBlock = Chunk.getBlock(chunk, blockI, blockJ, blockK);
-		Chunk.addBlock(chunk, blockI, blockJ, blockK, block, up, forward);
 		updateLightForBlock(vorld, x, y, z, previousBlock, block);
 	};
 
@@ -166,10 +175,11 @@ let Vorld = module.exports = (function() {
 			chunk = Chunk.create({ size: vorld.chunkSize });
 			exports.addChunk(vorld, chunk, chunkI, chunkJ, chunkK);
 		}
-		let previousBlock = Chunk.getBlock(chunk, blockI, blockJ, blockK);
+
+		// NOTE: we don't propagate light changes in set functions
 		Chunk.addBlock(chunk, blockI, blockJ, blockK, block, up, forward);
-		let x = chunkI * vorld.chunkSize + blockI, y = chunkJ * vorld.chunkSize + blockJ, z = chunkK * vorld.chunkSize + blockK;
-		updateLightForBlock(vorld, x, y, z, previousBlock, block);
+		// However we do set heightmap (which is then used for sky light)
+		updateHeightMap(vorld, chunkI, chunkJ, chunkK, blockI, blockJ, blockK, block);
 	};
 
 	exports.isBlockSolid = function(vorld, x, y, z) {
@@ -232,7 +242,22 @@ let Vorld = module.exports = (function() {
 			return Chunk.getBlockLight(chunk, blockI, blockJ, blockK);
 		}
 		return 0;
-	}
+	};
+
+	let getBlockSunlight = function(vorld, x, y, z) {
+		let size = vorld.chunkSize;
+		let chunkI = Math.floor(x / size),
+			chunkJ = Math.floor(y / size),
+			chunkK = Math.floor(z / size);
+		let blockI = x - (chunkI * size),
+			blockJ = y - (chunkJ * size),
+			blockK = z - (chunkK * size);
+		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
+		if (chunk) {
+			return Chunk.getBlockSunlight(chunk, blockI, blockJ, blockK);
+		}
+		return 0;
+	};
 
 	let getBlockAttenuation = function(vorld, x, y, z) {
 		let block = exports.getBlock(vorld, x, y, z);
@@ -243,6 +268,8 @@ let Vorld = module.exports = (function() {
 		return 1;
 	}
 
+	// HACK: It's incorrect that this returns the max of sunlight and light when getBlockLight and getBlockSunlight are separate
+	// this is this way right now because it means we didn't have to change the mesher
 	exports.getBlockLightByIndex = function(vorld, chunkI, chunkJ, chunkK, blockI, blockJ, blockK) {
 		if (blockI >= vorld.chunkSize) {
 			blockI = blockI - vorld.chunkSize;
@@ -267,13 +294,15 @@ let Vorld = module.exports = (function() {
 		}
 		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
 		if (chunk) {
-			return Chunk.getBlockLight(chunk, blockI, blockJ, blockK);
+			let light = Chunk.getBlockLight(chunk, blockI, blockJ, blockK);
+			let sunlight = Chunk.getBlockSunlight(chunk, blockI, blockJ, blockK);
+			return Math.max(light, sunlight); // TODO: If we want different colours we'll have to separate these
 		}
 		return 0;
 	};
 
 	let VectorQueue = require('./vectorQueue');
-	let popogationQueue = VectorQueue.create();
+	let propagationQueue = VectorQueue.create();
 	let removalQueue = VectorQueue.create();
 
 	let updateLightForBlock = function(vorld, x, y, z, previousBlock, newBlock) {
@@ -288,16 +317,24 @@ let Vorld = module.exports = (function() {
 			// Note - is overzealous for cases where prev attenuation > 1
 		}
 		if (prevLightLevel > newLight) {
-			removeLight(vorld, x, y, z, removalQueue, popogationQueue);
+			removeLight(vorld, x, y, z, removalQueue, propagationQueue);
 		}
 
 		if (newBlockDef && newBlockDef.light) {
 			addLight(vorld, x, y, z, newBlockDef.light);
 		} else if (!newBlock || (newBlockDef && !newBlockDef.isOpaque)) {
-			buildAdjacentLightQueue(popogationQueue, vorld, x, y, z);
-			if (popogationQueue.length) {
-				propogateLight(vorld, popogationQueue);
+			buildAdjacentLightQueue(propagationQueue, vorld, x, y, z);
+			if (propagationQueue.length) {
+				propagateLight(vorld, propagationQueue);
 			}
+			buildAdjacentSunlightQueue(propagationQueue, vorld, x, y, z);
+			if (propagationQueue.length) {
+				propagateLight(vorld, propagationQueue, true);
+			}
+			// TODO: Handle empty adjacent chunks for sunlight
+			// requires going *up* to the top of the chunk and propagating down 
+			// if there's no adjacent chunk *and* maxY for that x/z is less than y
+			// (or is undefined)
 		}
 	};
 
@@ -322,11 +359,32 @@ let Vorld = module.exports = (function() {
 		}
 	};
 
+	let buildAdjacentSunlightQueue = function(queue, vorld, x, y, z) {
+		if (getBlockSunlight(vorld, x + 1, y, z)) {
+			queue.push(x + 1, y, z);
+		}
+		if (getBlockSunlight(vorld, x - 1, y, z)) {
+			queue.push(x - 1, y, z);
+		}
+		if (getBlockSunlight(vorld, x, y + 1, z)) {
+			queue.push(x, y + 1, z);
+		}
+		if (getBlockSunlight(vorld, x, y - 1, z)) {
+			queue.push(x, y - 1, z);
+		}
+		if (getBlockSunlight(vorld, x, y, z + 1)) {
+			queue.push(x, y, z + 1);
+		}
+		if (getBlockSunlight(vorld, x, y, z - 1)) {
+			queue.push(x, y, z - 1);
+		}
+	};
+
 	let addLight = function(vorld, x, y, z, light) {
-		let queue = popogationQueue;
+		let queue = propagationQueue;
 		if (light > 0 && trySetLightForBlock(vorld, x, y, z, light)) {
 			queue.push(x, y, z);
-			propogateLight(vorld, queue)
+			propagateLight(vorld, queue)
 		}
 	};
 
@@ -379,31 +437,103 @@ let Vorld = module.exports = (function() {
 		queue.reset();
 
 		if (backfillQueue.length > 0) {
-			propogateLight(vorld, backfillQueue);
+			propagateLight(vorld, backfillQueue);
 		}
 	};
 
-	let propogateLight = function(vorld, queue) {
+	let removeSunlight = function(vorld, x, y, z, queue, backfillQueue) {
+		queue.push(x, y, z);
 		while (queue.length) {
 			let pos = queue.pop();
-			let light = getBlockLight(vorld, pos[0], pos[1], pos[2]) - getBlockAttenuation(vorld, pos[0], pos[1], pos[2]);
-			if (light > 0) {
-				if (trySetLightForBlock(vorld, pos[0] + 1, pos[1], pos[2], light)) {
-					queue.push(pos[0] + 1, pos[1], pos[2]);
-				}
-				if (trySetLightForBlock(vorld, pos[0] - 1, pos[1], pos[2], light)) {
-					queue.push(pos[0] - 1, pos[1], pos[2]);
-				}
-				if (trySetLightForBlock(vorld, pos[0], pos[1] + 1, pos[2], light)) {
+			let neighbourLight = 0;
+			let light = getBlockSunlight(vorld, pos[0], pos[1], pos[2]);
+			
+			neighbourLight = getBlockSunlight(vorld, pos[0] + 1, pos[1], pos[2]);
+			if (neighbourLight && neighbourLight < light) {
+				queue.push(pos[0] + 1, pos[1], pos[2]);
+			} else if (neighbourLight) {
+				backfillQueue.push(pos[0] + 1, pos[1], pos[2]);
+			}
+			neighbourLight = getBlockSunlight(vorld, pos[0] - 1, pos[1], pos[2]);
+			if (neighbourLight && neighbourLight < light) {
+				queue.push(pos[0] - 1, pos[1], pos[2]);
+			} else if (neighbourLight) {
+				backfillQueue.push(pos[0] - 1, pos[1], pos[2]);
+			}
+			neighbourLight = getBlockSunlight(vorld, pos[0], pos[1] + 1, pos[2]);
+			if (neighbourLight && neighbourLight < light) {
+				queue.push(pos[0], pos[1] + 1, pos[2]);
+			} else if (neighbourLight) {
+				backfillQueue.push(pos[0], pos[1] + 1, pos[2]);
+			}
+			neighbourLight = getBlockSunlight(vorld, pos[0], pos[1] - 1, pos[2]);
+			if (neighbourLight && (neighbourLight < light || (neighbourLight == light && light == 15))) {
+				queue.push(pos[0], pos[1] - 1, pos[2]);
+			} else if (neighbourLight) {
+				backfillQueue.push(pos[0], pos[1] - 1, pos[2]);
+			}
+			neighbourLight = getBlockSunlight(vorld, pos[0], pos[1], pos[2] + 1);
+			if (neighbourLight && neighbourLight < light) {
+				queue.push(pos[0], pos[1], pos[2] + 1);
+			} else if (neighbourLight) {
+				backfillQueue.push(pos[0], pos[1], pos[2] + 1);
+			}
+			neighbourLight = getBlockSunlight(vorld, pos[0], pos[1], pos[2] - 1);
+			if (neighbourLight && neighbourLight < light) {
+				queue.push(pos[0], pos[1], pos[2] - 1);
+			} else if (neighbourLight) {
+				backfillQueue.push(pos[0], pos[1], pos[2] - 1);
+			}
+
+			removeSunlightForBlock(vorld, pos[0], pos[1], pos[2]);
+		}
+		queue.reset();
+
+		if (backfillQueue.length > 0) {
+			propagateLight(vorld, backfillQueue, true);
+		}
+	};
+
+	let propagateSunlight = exports.propagateSunlight = function(vorld, x, y, z) {
+		let queue = propagationQueue;
+		queue.push(x, y, z);
+		propagateLight(vorld, queue, true);
+	};
+
+	let propagateLight = function(vorld, queue, isSunlight) {
+		while (queue.length) {
+			let pos = queue.pop();
+			let attenuation = getBlockAttenuation(vorld, pos[0], pos[1], pos[2]);
+			let light = !isSunlight ? getBlockLight(vorld, pos[0], pos[1], pos[2]) : getBlockSunlight(vorld, pos[0], pos[1], pos[2]);
+			light -= attenuation;
+
+			// Sunlight doesn't attenuate as it goes down
+			let downLight = light;
+			if (isSunlight && attenuation == 1 && light + attenuation == 15) {
+				downLight = 15;
+			}
+
+			// TODO: Get directional opacity vector, values 0 or 1 - transform by rotation and each axis as appropriate before propogating light
+			// Consider - we could probably store propogation direction histories in our queue - and then simulate bounces better than just flood fill
+
+			// Note: Only pushes when new light for block is greater than old value
+			if (light > 0) { 
+				if (trySetLightForBlock(vorld, pos[0], pos[1] + 1, pos[2], light, isSunlight)) {
 					queue.push(pos[0], pos[1] + 1, pos[2]);
 				}
-				if (trySetLightForBlock(vorld, pos[0], pos[1] - 1, pos[2], light)) {
+				if (trySetLightForBlock(vorld, pos[0], pos[1] - 1, pos[2], downLight, isSunlight)) {
 					queue.push(pos[0], pos[1] - 1, pos[2]);
 				}
-				if (trySetLightForBlock(vorld, pos[0], pos[1], pos[2] + 1, light)) {
+				if (trySetLightForBlock(vorld, pos[0] + 1, pos[1], pos[2], light, isSunlight)) {
+					queue.push(pos[0] + 1, pos[1], pos[2]);
+				}
+				if (trySetLightForBlock(vorld, pos[0] - 1, pos[1], pos[2], light, isSunlight)) {
+					queue.push(pos[0] - 1, pos[1], pos[2]);
+				}				
+				if (trySetLightForBlock(vorld, pos[0], pos[1], pos[2] + 1, light, isSunlight)) {
 					queue.push(pos[0], pos[1], pos[2] + 1);
 				}
-				if (trySetLightForBlock(vorld, pos[0], pos[1], pos[2] - 1, light)) {
+				if (trySetLightForBlock(vorld, pos[0], pos[1], pos[2] - 1, light, isSunlight)) {
 					queue.push(pos[0], pos[1], pos[2] - 1);
 				}
 			}
@@ -411,7 +541,7 @@ let Vorld = module.exports = (function() {
 		queue.reset();
 	};
 
-	let trySetLightForBlock = function(vorld, x, y, z, light) {
+	let trySetLightForBlock = function(vorld, x, y, z, light, isSunlight) {
 		let size = vorld.chunkSize;
 		let chunkI = Math.floor(x / size),
 			chunkJ = Math.floor(y / size),
@@ -423,19 +553,29 @@ let Vorld = module.exports = (function() {
 		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
 		let currentLight = 0, blockDef = null;
 		if (!chunk) {
-			chunk = Chunk.create({ size: vorld.chunkSize });
-			exports.addChunk(vorld, chunk, chunkI, chunkJ, chunkK);
+			if (!isSunlight) {  // This is a problem for sunlight - we do sometimes need to create new chunks if we allow sparse chunks
+				chunk = Chunk.create({ size: vorld.chunkSize });
+				exports.addChunk(vorld, chunk, chunkI, chunkJ, chunkK);	
+			}
 		} else {
 			block = Chunk.getBlock(chunk, blockI, blockJ, blockK);
 			if (block && vorld.blockConfig) {
 				blockDef = vorld.blockConfig[block]; 
 			}
-			currentLight = Chunk.getBlockLight(chunk, blockI, blockJ, blockK);
+			currentLight = !isSunlight 
+				? Chunk.getBlockLight(chunk, blockI, blockJ, blockK)
+				: Chunk.getBlockSunlight(chunk, blockI, blockJ, blockK);
 		}
-		if ((!blockDef || !blockDef.isOpaque) && (!currentLight || light >= currentLight)) {
-			// TODO: Pass through modifers rather than just !isOpaque
-			Chunk.setBlockLight(chunk, blockI, blockJ, blockK, light);
-			return true;
+		if (chunk) {
+			if ((!blockDef || !blockDef.isOpaque) && (!currentLight || light > currentLight)) {
+				// TODO: Pass through modifers rather than just !isOpaque
+				if (!isSunlight) {
+					Chunk.setBlockLight(chunk, blockI, blockJ, blockK, light);
+				} else {
+					Chunk.setBlockSunlight(chunk, blockI, blockJ, blockK, light);
+				}
+				return true;
+			}
 		}
 		return false;
 	};
@@ -453,7 +593,123 @@ let Vorld = module.exports = (function() {
 		if (chunk) {
 			Chunk.setBlockLight(chunk, blockI, blockJ, blockK, 0);
 		}
-	}
+	};
+
+	let removeSunlightForBlock = function(vorld, x, y, z) {
+		let size = vorld.chunkSize;
+		let chunkI = Math.floor(x / size),
+			chunkJ = Math.floor(y / size),
+			chunkK = Math.floor(z / size);
+		let blockI = x - (chunkI * size),
+			blockJ = y - (chunkJ * size),
+			blockK = z - (chunkK * size);
+			
+		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
+		if (chunk) {
+			Chunk.setBlockSunlight(chunk, blockI, blockJ, blockK, 0);
+		}
+	};
+
+	// Starts from provided coordinates and fills upwards to yStop or max
+	let fillSunlight = exports.fillSunlight = (vorld, heightMapEntry, chunkI, chunkJ, chunkK, i, j, k, light, yStop) => {
+		let chunkSize = vorld.chunkSize;
+
+		if (yStop === undefined) {
+			// Point to stop filling
+			yStop = (heightMapEntry.maxChunkIndex + 1) * chunkSize; 
+		}		
+
+		while (chunkJ * chunkSize + j < yStop) {
+			let chunk = Vorld.getChunk(vorld, chunkI, chunkJ, chunkK);
+			if (chunk) {
+				// Note - does not check block opaqueness so don't call this incorrectly or you'll get glowing blocks
+				Chunk.setBlockSunlight(chunk, i, j, k, light);
+				j += 1;
+				if (j >= chunkSize) {
+					j = 0;
+					chunkJ += 1;
+				}
+			} else {
+				j = 0;
+				chunkJ += 1;
+			}
+		}
+	};
+
+	// Heightmap
+	let getHighestBlockY = (vorld, x, z) => {
+		let chunkI = Math.floor(x / vorld.chunkSize),
+		chunkK = Math.floor(z / vorld.chunkSize);
+		let chunkKey = chunkI + "_" + chunkK;
+
+		let heightMapEntry = vorld.heightMap[chunkKey];
+		if (heightMapEntry) {
+			let i = x - chunkI * vorld.chunkSize,
+				k = z - chunkK * vorld.chunkSize;
+			let key = i + k * vorld.chunkSize;
+			let value = vorld.heightMap[chunkKey].maxY[key];
+			if (value !== undefined) {
+				return value;
+			}
+		}
+		return undefined;
+	};
+
+	let updateHeightMap = (vorld, chunkI, chunkJ, chunkK, i, j, k, block) => {
+		let chunkKey = chunkI + "_" + chunkK;
+		let heightMapEntry = vorld.heightMap[chunkKey]; 
+		if (!heightMapEntry) {
+			// TODO: Heightmap.create method
+			heightMapEntry = {
+				minChunkIndex: chunkJ,
+				maxChunkIndex: chunkJ,
+				maxY: [],
+				chunkI: chunkI,
+				chunkK: chunkK
+			};
+			vorld.heightMap[chunkKey] = heightMapEntry;
+		} else {
+			if (heightMapEntry.minChunkIndex > chunkJ) {
+				heightMapEntry.minChunkIndex = chunkJ;
+			}
+			if (heightMapEntry.maxChunkIndex < chunkJ) {
+				heightMapEntry.maxChunkIndex = chunkJ;
+			}
+		}
+
+		let index = i + k * vorld.chunkSize;
+		let y = chunkJ * vorld.chunkSize + j;
+		let yMax = heightMapEntry.maxY[index];
+		if (block) {
+			if (yMax === undefined || yMax < y) {
+				heightMapEntry.maxY[index] = y;
+			}
+		} else if (yMax === y) { 
+			// NOTE: leaves heightMapEntry undefined until block is placed
+			// scan down, till you find a block or exceed chunk range
+			// TODO: Test this with worlds that don't have blocks at the bottom!
+			// TODO: Test this with worlds that have sparse chunks on y axis
+			let foundBlock = false;
+			let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
+			while (!foundBlock && chunkJ >= heightMapEntry.minChunkIndex) {
+				if (chunk) {
+					while (j >= 0) {
+						if (Chunk.getBlock(chunk, i, j, k)) {
+							heightMapEntry.maxY[index] =  chunkJ * vorld.chunkSize + j;
+							foundBlock = true;
+							break;
+						}
+						j -= 1;
+					}
+				}
+				if (!foundBlock) {
+					chunkJ -= 1;
+					j = (j + vorld.chunkSize) % vorld.chunkSize;
+					chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
+				}
+			}
+		}
+	};
 
 	// Utils
 	exports.forEachChunk = function(vorld, delegate) {
@@ -468,9 +724,35 @@ let Vorld = module.exports = (function() {
 		if (a.chunkSize != b.chunkSize) {
 			return false;
 		}
+
 		let keys = Object.keys(b.chunks);
 		for (let i = 0, l = keys.length; i < l; i++) {
 			a.chunks[keys[i]] = b.chunks[keys[i]];
+		}
+
+		let heightMapKeys = Object.keys(b.heightMap);
+		for (let i = 0, l = heightMapKeys.length; i < l; i++) {
+			// TODO: Test - I think right now we already merge in full y stacks? which makes this not happen
+			// It might be preferable to always merge in full y stacks not require this logic 
+			// NOTE: Method does not propagate lighting changes - sets dirty flag if it might be required
+			if (!a.heightMap[heightMapKeys[i]]) {
+				a.heightMap[heightMapKeys[i]] = b.heightMap[heightMapKeys[i]];
+			} else {
+				let aEntry = a.heightMap[heightMapKeys[i]];
+				let bEntry = b.heightMap[heightMapKeys[i]];
+				aEntry.minChunkIndex = Math.min(bEntry.minChunkIndex);
+				aEntry.maxChunkIndex = Math.max(bEntry.maxChunkIndex);
+				aEntry.dirty = !!aEntry.dirty;
+
+				// Check and update max Y values
+				for (let index = 0, n = Math.max(aEntry.maxY.length, bEntry.maxY.length); index < n; index++) {
+					let aYMax = aEntry.maxY[index], bYMax = bEntry.maxY[index];
+					if ((bYMax !== undefined) && (aYMax == undefined || bYMax > aYMax)) {
+						aEntry.maxY[index] = bYMax;
+					}
+					aEntry.dirty &= aYMax != bYMax;
+				}
+			}
 		}
 		return true;
 	};
@@ -478,18 +760,24 @@ let Vorld = module.exports = (function() {
 	// Note uses chunk indices
 	exports.createSlice = function(vorld, iMin, iMax, jMin, jMax, kMin, kMax) {
 		let chunks = {};
+		let heightMap = {};
 		for (let i = iMin; i <= iMax; i++) {
-			for (let j = jMin; j <= jMax; j++) {
-				for (let k = kMin; k <= kMax; k++) {
+			for (let k = kMin; k <= kMax; k++) {
+				for (let j = jMin; j <= jMax; j++) {
 					let key = getKey(i, j, k);
 					if (vorld.chunks[key]) {
 						chunks[key] = vorld.chunks[key];
 					}
 				}
+				let key = i + "_" + k;
+				if (vorld.heightMap[key]) {
+					heightMap[key] = vorld.heightMap[key];
+				}
 			}
 		}
+		
 		// As creating from existing vorld, do not need to use Chunk.create 
-		return { chunkSize: vorld.chunkSize, chunks: chunks, blockConfig: vorld.blockConfig };
+		return { chunkSize: vorld.chunkSize, chunks: chunks, blockConfig: vorld.blockConfig, heightMap: heightMap };
 	};
 
 	exports.createSliceFromBounds = function(vorld, bounds) {
@@ -506,7 +794,7 @@ let Vorld = module.exports = (function() {
 
 	// Constructor
 	exports.create = function(parameters) {
-		var vorld = {};
+		let vorld = {};
 		if (parameters && parameters.chunkSize) {
 			vorld.chunkSize = parameters.chunkSize;
 		} else {
@@ -518,9 +806,16 @@ let Vorld = module.exports = (function() {
 		}
 		vorld.chunks = {};
 		if (parameters && parameters.chunks) {
-			var keys = Object.keys(parameters.chunks);
-			for (var i = 0, l = keys.length; i < l; i++) {
+			let keys = Object.keys(parameters.chunks);
+			for (let i = 0, l = keys.length; i < l; i++) {
 				vorld.chunks[keys[i]] = Chunk.create(parameters.chunks[keys[i]]);
+			}
+		}
+		vorld.heightMap = {}; // map of yMax for a given x_z chunk key
+		if (parameters && parameters.heightMap) {
+			let keys = Object.keys(parameters.heightMap);
+			for (let i = 0, l = keys.length; i < l; i++) {
+				vorld.heightMap[keys[i]] = parameters.heightMap[keys[i]];
 			}
 		}
 		return vorld;

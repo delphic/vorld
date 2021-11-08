@@ -130,10 +130,10 @@ let Mesher = module.exports = (function(){
 		{
 			case Cardinal.Direction.up:
 			case Cardinal.Direction.down:
-				adj = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k) | 0;
-				side0 = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k) | 0;
-				side1 = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k + aov[2]) | 0;
-				corner = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2]) | 0;
+				adj = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k) || 0;
+				side0 = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k) || 0;
+				side1 = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k + aov[2]) || 0;
+				corner = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2]) || 0;
 				if (!side0 && !side1 && corner > 0) {
 					// If no light at side0 and side1 they may be opaque in which case we should ignore any light value from corner
 					let x = chunkI * vorld.chunkSize + i, y = chunkJ * vorld.chunkSize + j, z = chunkK * vorld.chunkSize + k;
@@ -145,10 +145,10 @@ let Mesher = module.exports = (function(){
 				break;
 			case Cardinal.Direction.forward:
 			case Cardinal.Direction.back:
-				adj = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j, k + aov[2]) | 0;
-				side0 = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k + aov[2]) | 0;
-				side1 = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k + aov[2]) | 0;
-				corner = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2]) | 0;
+				adj = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j, k + aov[2]) || 0;
+				side0 = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k + aov[2]) || 0;
+				side1 = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k + aov[2]) || 0;
+				corner = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2]) || 0;
 				if (!side0 && !side1 && corner > 0) {
 					// If no light at side0 and side1 they may be opaque in which case we should ignore any light value from corner
 					let x = chunkI * vorld.chunkSize + i, y = chunkJ * vorld.chunkSize + j, z = chunkK * vorld.chunkSize + k;
@@ -160,10 +160,10 @@ let Mesher = module.exports = (function(){
 				break;
 			case Cardinal.Direction.left:
 			case Cardinal.Direction.right:
-				adj = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k) | 0;
-				side0 = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k + aov[2]) | 0;
-				side1 = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k) | 0;
-				corner = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2]) | 0;
+				adj = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k) || 0;
+				side0 = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k + aov[2]) || 0;
+				side1 = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k) || 0;
+				corner = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2]) || 0;
 				if (!side0 && !side1 && corner > 0) {
 					// If no light at side0 and side1 they may be opaque in which case we should ignore any light value from corner
 					let x = chunkI * vorld.chunkSize + i, y = chunkJ * vorld.chunkSize + j, z = chunkK * vorld.chunkSize + k;
@@ -209,7 +209,7 @@ let Mesher = module.exports = (function(){
 			let light = 0;
 			if (blockDef && blockDef.light) {
 				// Use own light if a light emitting block
-				light = blockDef.light;
+				light = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j, k);
 			} else {
 				// else get the adjacent blocks light
 				light = calculateLightLevel(vorld, vector, direction, i , j, k, chunkI, chunkJ, chunkK);
@@ -312,12 +312,10 @@ let Mesher = module.exports = (function(){
 			let light = 0;
 			if (blockDef && blockDef.light) {
 				// Use own light if a light emitting block
-				light = blockDef.light;
+				light = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j, k);
 			} else {
 				// else get the adjacent blocks light
-				// light = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i + normal[0], j + normal[1], k + normal[2]);
 				// NOTE: assumes normal is axis aligned unit vector
-				// TODO: Should both this and AOLevel above calculate from transformed normal instead?
 				light = calculateLightLevel(vorld, vertex, direction, i , j, k, chunkI, chunkJ, chunkK);
 			}
 			lightBake.push(light / 15);

@@ -32,9 +32,24 @@ let Chunk = module.exports = (function() {
 	};
 
 	exports.setBlockLight = function(chunk, i, j, k, light) {
-		let index = i + chunk.size * j + chunk.size *chunk.size * k;
-		chunk.blockLighting[index] = light;
+		let index = i + chunk.size * j + chunk.size * chunk.size * k;
+		if (chunk.blockLighting[index]) {
+			let v = chunk.blockLighting[index];
+			let sunLight = v - Math.floor(v);
+			chunk.blockLighting[index] = light + sunLight;
+		} else {
+			chunk.blockLighting[index] = light;
+		}
 	}
+
+	exports.setBlockSunlight = function(chunk, i, j, k, sunlight) {
+		let index = i + chunk.size * j + chunk.size * chunk.size * k;
+		if (chunk.blockLighting[index]) {
+			chunk.blockLighting[index] = Math.floor(chunk.blockLighting[index]) + sunlight / 16;
+		} else {
+			chunk.blockLighting[index] = sunlight / 16;
+		}
+	};
 	
 	exports.getBlock = function(chunk, i, j, k) {
 		if (i < 0 || j < 0 || k < 0 || i >= chunk.size || j >= chunk.size || k >= chunk.size) {
@@ -73,8 +88,21 @@ let Chunk = module.exports = (function() {
 			return null;
 		}
 		// Currently expect values 0 to 15
-		return chunk.blockLighting[index];
+		return Math.floor(chunk.blockLighting[index] || 0);
 	};
+
+	exports.getBlockSunlight = function(chunk, i, j, k) {
+		let index = i + chunk.size * j + chunk.size * chunk.size * k;
+		if (i < 0 || j < 0 || k < 0 || i >= chunk.size || j >= chunk.size || k >= chunk.size) {
+			return null;
+		}
+		// Currently expect values 0 to 15
+		let v = chunk.blockLighting[index];
+		if (v) {
+			return Math.round((v - Math.floor(v)) * 16);
+		}
+		return 0;
+	}
 
 	exports.create = function(parameters) {
 		let chunk = {};
