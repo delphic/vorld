@@ -12,4 +12,6 @@ Include repo as submodule and use Common JS: e.g. `require('./vorld/core/vorld')
 ## Build Workers
 `browserify meshing/worker.js -o mesher-worker.js`
 
+`browserify lighting/worker.js -o lighting-worker.js`
+
 `browserify generation/worker.js -o generation-worker.js`
