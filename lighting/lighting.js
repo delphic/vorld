@@ -5,9 +5,7 @@ let Lighting = module.exports = (function(){
 
 	exports.performLightingPass = (vorld, bounds, progressDelegate) => {
 		// Need to operate on a slice 1 larger than bounds as per meshing
-		// if working on sub-sections
-
-		// TODO: only consider bounds (although lighting will spread into other chunks but that's)
+		// when working on sub-sections
 
 		// Loop over heightmap, fill with full sunlight (15) in all blocks above yMax
 		let keys = Object.keys(vorld.heightMap);
@@ -42,7 +40,8 @@ let Lighting = module.exports = (function(){
 			let chunkI = heightMapEntry.chunkI,
 				chunkK = heightMapEntry.chunkK;
 		
-			if (chunkI < bounds.iMin || chunkI > bounds.iMax || chunkK < bounds.kMin || chunkK > bounds.kMax) {
+			// Only propagate sunlight inside bounds (note BFS still searches outside bounds - TODO: prevent that!)
+			if (bounds && (chunkI < bounds.iMin || chunkI > bounds.iMax || chunkK < bounds.kMin || chunkK > bounds.kMax)) {
 				progressDelegate();
 				continue;
 			}
