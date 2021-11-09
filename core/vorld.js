@@ -46,13 +46,7 @@ let Vorld = module.exports = (function() {
 		exports.setBlockByIndex(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK, block, up, forward);
 		// Update Sunlight
 		if (block) {
-			if (previousYMax !== undefined) {
-				if (previousYMax < y) {
-					removeSunlight(vorld, x, y, z, removalQueue, propagationQueue);
-				}
-			} else {
-				removeSunlight(vorld, x, y, z, removalQueue, propagationQueue);
-			}
+			removeSunlight(vorld, x, y, z, removalQueue, propagationQueue);
 		} else if (y == previousYMax) {
 			addSunlight(vorld, x, previousYMax + 1, z); // Potn BUG: what if previousYMax is also the very top of the world? Should do min of max value and prevYMax + 1
 		}
