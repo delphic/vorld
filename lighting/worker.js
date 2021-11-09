@@ -5,7 +5,7 @@ onmessage = function(e) {
 
 	let vorld = e.data.vorld;
 	let bounds = e.data.bounds;
-	let count = 0, total = 2 * Object.keys(vorld.heightMap).length;
+	let count = 0, total = Object.keys(vorld.heightMap).length;
 
 	Lighting.performLightingPass(vorld, bounds, () => {
 		count++;

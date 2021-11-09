@@ -54,7 +54,7 @@ let Vorld = module.exports = (function() {
 				removeSunlight(vorld, x, y, z, removalQueue, propagationQueue);
 			}
 		} else if (y == previousYMax) {
-			propagateSunlight(vorld, x, previousYMax + 1, z);
+			addSunlight(vorld, x, previousYMax + 1, z); // Potn BUG: what if previousYMax is also the very top of the world? Should do min of max value and prevYMax + 1
 		}
 		updateLightForBlock(vorld, x, y, z, previousBlock, block);
 	};
@@ -494,13 +494,19 @@ let Vorld = module.exports = (function() {
 		}
 	};
 
-	let propagateSunlight = exports.propagateSunlight = function(vorld, x, y, z) {
+	let addSunlight = exports.addSunlight = function(vorld, x, y, z) {
+		trySetLightForBlock(vorld, x, y, z, 15, true);
 		let queue = propagationQueue;
 		queue.push(x, y, z);
 		propagateLight(vorld, queue, true);
 	};
 
 	let propagateLight = function(vorld, queue, isSunlight) {
+		// This is sunlight bool is kinda ugly, maybe we should just have two separate similar functions
+		// Potential optimisations
+		// * Check adjacency when filling sunlight horizontally, < 14 to prevent repeated fills into the space
+		// * Use heap instead of queue (prioritise blocks with highest sunlight to set)
+		//   the insert cost may outweigh the reduction in propogation
 		while (queue.length) {
 			let pos = queue.pop();
 			let attenuation = getBlockAttenuation(vorld, pos[0], pos[1], pos[2]);
@@ -524,16 +530,22 @@ let Vorld = module.exports = (function() {
 				if (trySetLightForBlock(vorld, pos[0], pos[1] - 1, pos[2], downLight, isSunlight)) {
 					queue.push(pos[0], pos[1] - 1, pos[2]);
 				}
-				if (trySetLightForBlock(vorld, pos[0] + 1, pos[1], pos[2], light, isSunlight)) {
+				// For Sunlight - don't consider horizontally adjacent blocks which will be filled with sunlight
+				// at some point (although they may not have been yet) 
+				if ((!isSunlight || getHighestBlockY(vorld, pos[0] + 1, pos[2]) > pos[1])
+					&& trySetLightForBlock(vorld, pos[0] + 1, pos[1], pos[2], light, isSunlight)) {
 					queue.push(pos[0] + 1, pos[1], pos[2]);
 				}
-				if (trySetLightForBlock(vorld, pos[0] - 1, pos[1], pos[2], light, isSunlight)) {
+				if ((!isSunlight || getHighestBlockY(vorld, pos[0] - 1, pos[2]) > pos[1])
+					&& trySetLightForBlock(vorld, pos[0] - 1, pos[1], pos[2], light, isSunlight)) {
 					queue.push(pos[0] - 1, pos[1], pos[2]);
-				}				
-				if (trySetLightForBlock(vorld, pos[0], pos[1], pos[2] + 1, light, isSunlight)) {
+				}
+				if ((!isSunlight || getHighestBlockY(vorld, pos[0], pos[2] + 1) > pos[1])
+					&& trySetLightForBlock(vorld, pos[0], pos[1], pos[2] + 1, light, isSunlight)) {
 					queue.push(pos[0], pos[1], pos[2] + 1);
 				}
-				if (trySetLightForBlock(vorld, pos[0], pos[1], pos[2] - 1, light, isSunlight)) {
+				if ((!isSunlight || getHighestBlockY(vorld, pos[0], pos[2] - 1) > pos[1])
+					&& trySetLightForBlock(vorld, pos[0], pos[1], pos[2] - 1, light, isSunlight)) {
 					queue.push(pos[0], pos[1], pos[2] - 1);
 				}
 			}
@@ -607,32 +619,6 @@ let Vorld = module.exports = (function() {
 		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
 		if (chunk) {
 			Chunk.setBlockSunlight(chunk, blockI, blockJ, blockK, 0);
-		}
-	};
-
-	// Starts from provided coordinates and fills upwards to yStop or max
-	let fillSunlight = exports.fillSunlight = (vorld, heightMapEntry, chunkI, chunkJ, chunkK, i, j, k, light, yStop) => {
-		let chunkSize = vorld.chunkSize;
-
-		if (yStop === undefined) {
-			// Point to stop filling
-			yStop = (heightMapEntry.maxChunkIndex + 1) * chunkSize; 
-		}		
-
-		while (chunkJ * chunkSize + j < yStop) {
-			let chunk = Vorld.getChunk(vorld, chunkI, chunkJ, chunkK);
-			if (chunk) {
-				// Note - does not check block opaqueness so don't call this incorrectly or you'll get glowing blocks
-				Chunk.setBlockSunlight(chunk, i, j, k, light);
-				j += 1;
-				if (j >= chunkSize) {
-					j = 0;
-					chunkJ += 1;
-				}
-			} else {
-				j = 0;
-				chunkJ += 1;
-			}
 		}
 	};
 
