@@ -217,6 +217,9 @@ let Mesher = module.exports = (function(){
 				sunlight = calculateLightLevel(vorld, vector, direction, i , j, k, chunkI, chunkJ, chunkK, Vorld.getBlockSunlightByIndex);
 			}
 			lightBake.push(light + (sunlight / 16));
+			// We could at this meshing stage determine the orientation of the triangles based on AO first then lighting to remove the diagonal
+			// bleeding effect, requires us to duplicate the logic in the shader and won't account for changes in lighting level
+			// could prioritise whichever light has the potential to be lower but non-zero, as this is where the bleeding is most obvious
 
 			if (offsetMagnitude) {
 				Cardinal.getVectorFromDirection(offsetVector, direction);
@@ -349,7 +352,7 @@ let Mesher = module.exports = (function(){
 		out[2] += k;
 	};
 
-	exports.createMesh = function(vorld, chunk, atlas, alphaBlockToMesh) {
+	exports.createMesh = function(vorld, chunk, atlas, alphaBlockToMesh, meshCutout) {
 		// Vorld can be whole set of data or a slice, however adjacent chunks
 		// should be provide to avoid unnecessary internal faces.
 		if (!chunk) {
@@ -380,9 +383,12 @@ let Mesher = module.exports = (function(){
 			if (!block) { return; }
 			if (alphaBlockToMesh && block != alphaBlockToMesh) { return; }
 
-			let meshInternals = !!Vorld.getBlockTypeDefinition(vorld, block).meshInternals;
+			let blockDefinition = Vorld.getBlockTypeDefinition(vorld, block);
+			let meshInternals = !!blockDefinition.meshInternals;
 			let isBlockOpaque = Vorld.isBlockTypeOpaque(vorld, block);
-			let isBlockAlpha = Vorld.isBlockTypeAlpha(vorld, block); // Use better time
+			let isBlockAlpha = Vorld.isBlockTypeAlpha(vorld, block);
+			let isBlockCutout = blockDefinition.useCutout;
+			if ((!meshCutout && isBlockCutout) || (meshCutout && !isBlockCutout)) { return; } // cutout blocks get their own mesh
 			if (!alphaBlockToMesh && isBlockAlpha) { return; } // alpha blocks get their own mesh
 
 			// Custom mesh, just put it in!

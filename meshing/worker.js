@@ -47,11 +47,12 @@ onmessage = function(e) {
 		for (let j = bounds.jMin; j <= bounds.jMax; j++) {
 			for (let k = bounds.kMin; k <= bounds.kMax; k++) {
 				count++;
-				let mesh = null;
+				let mesh = null, cutoutMesh = null;
 				alphaMeshes.length = 0;
 				let chunk = Vorld.getChunk(vorld, i, j, k);
 				if (chunk) {
 					mesh = Mesher.createMesh(vorld, chunk, atlas);
+					cutoutMesh = Mesher.createMesh(vorld, chunk, atlas, null, true);
 					for (let n = 0; n < alphaBlocks.length; n++) {
 						alphaMeshes[n] = Mesher.createMesh(vorld, chunk, atlas, alphaBlocks[n]);
 					}
@@ -63,6 +64,15 @@ onmessage = function(e) {
 						mesh: mesh,
 						chunkIndices: chunk.indices,
 						progress: count / totalRange
+					});
+					postedMesh = true;
+				}
+				if (cutoutMesh && cutoutMesh.indices.length) {
+					this.postMessage({
+						mesh: cutoutMesh,
+						chunkIndices: chunk.indices,
+						progress: count / totalRange,
+						cutout: true
 					});
 					postedMesh = true;
 				}
