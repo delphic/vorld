@@ -262,8 +262,6 @@ let Vorld = module.exports = (function() {
 		return 1;
 	}
 
-	// HACK: It's incorrect that this returns the max of sunlight and light when getBlockLight and getBlockSunlight are separate
-	// this is this way right now because it means we didn't have to change the mesher
 	exports.getBlockLightByIndex = function(vorld, chunkI, chunkJ, chunkK, blockI, blockJ, blockK) {
 		if (blockI >= vorld.chunkSize) {
 			blockI = blockI - vorld.chunkSize;
@@ -288,9 +286,37 @@ let Vorld = module.exports = (function() {
 		}
 		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
 		if (chunk) {
-			let light = Chunk.getBlockLight(chunk, blockI, blockJ, blockK);
-			let sunlight = Chunk.getBlockSunlight(chunk, blockI, blockJ, blockK);
-			return Math.max(light, sunlight); // TODO: If we want different colours we'll have to separate these
+			return Chunk.getBlockLight(chunk, blockI, blockJ, blockK);
+		}
+		return 0;
+	};
+
+	exports.getBlockSunlightByIndex = function(vorld, chunkI, chunkJ, chunkK, blockI, blockJ, blockK) {
+		if (blockI >= vorld.chunkSize) {
+			blockI = blockI - vorld.chunkSize;
+			chunkI += 1;
+		} else if (blockI < 0) {
+			blockI = vorld.chunkSize + blockI;
+			chunkI -= 1;
+		}
+		if (blockJ >= vorld.chunkSize) {
+			blockJ = blockJ - vorld.chunkSize;
+			chunkJ += 1;
+		} else if (blockJ < 0) {
+			blockJ = vorld.chunkSize + blockJ;
+			chunkJ -= 1;
+		}
+		if (blockK >= vorld.chunkSize) {
+			blockK = blockK - vorld.chunkSize;
+			chunkK += 1;
+		} else if (blockK < 0) {
+			blockK = vorld.chunkSize + blockK;
+			chunkK -= 1;
+		}
+		// TODO: Refactor into helper that does ^^ this as we do it in a lot of places, will require an out obj, but we can 'static' cache that
+		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
+		if (chunk) {
+			return Chunk.getBlockSunlight(chunk, blockI, blockJ, blockK);
 		}
 		return 0;
 	};

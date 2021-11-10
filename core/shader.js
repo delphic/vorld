@@ -46,10 +46,15 @@ let VoxelShader = module.exports = (function() {
 
 					"vViewSpacePosition = (uMVMatrix * vec4(aVertexPosition, 1.0)).xyz;",
 
+					// max of torch light and sunlight
+					"float light = max(floor(aLightLevel) / 16.0, uDirectionalLightMagnitude * fract(aLightLevel));",
+					// Will need to blend these to allow for sunlight colour
+					// NOTE: sun light (DirectionalLight) in no longer in fact directional in the shader
+
 					"float aoFactor = 1.0 - 0.25 * 1.333333 * fract(aTileIndex);", // 4/3 converts from 0 -> 0.75 to 0 -> 1, 0.5 reduces the impact
-					"float halfLambert = (uAmbientLightMagnitude + uDirectionalLightMagnitude * max(dot(aVertexNormal, normalize(vec3(-1.0, 2.0, 1.0))), 0.0));",
-					
-					"vLightWeight = max(halfLambert, aLightLevel) * aoFactor;",
+					// "float halfLambert = (uAmbientLightMagnitude + uDirectionalLightMagnitude * max(dot(aVertexNormal, normalize(vec3(-1.0, 2.0, 1.0))), 0.0));",
+
+					"vLightWeight = (light + uAmbientLightMagnitude) * aoFactor;",
 				"}"].join('\n');
 		},
 		fs: function(cutoutThreshold) {
