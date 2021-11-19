@@ -1,4 +1,7 @@
-let VoxelShader = module.exports = (function() {
+// Voxel Shader
+// includes fog, per vertex lighting and AO, optional alpha treshold discard (cutout)
+
+module.exports = (function() {
 	let exports = {};
 
 	let concat = (a, b) => {
@@ -84,7 +87,7 @@ let VoxelShader = module.exports = (function() {
 					"float fogAmount = 1.0 - exp2( - uFogDensity * uFogDensity * fragDistance * fragDistance * LOG2);",
 					"fogAmount = clamp(fogAmount, 0.0, 1.0);",
 
-					"fragColor =  mix(vec4(vLightWeight * color.rgb, color.a), vec4(uFogColor, 1.0), fogAmount);",
+					"fragColor =  mix(vec4(vLightWeight * color.rgb, color.a), vec4(uFogColor, 1.0), fogAmount);"
 			];
 			if (cutoutThreshold) {
 				// Cutout shader - note putting the if at the end has minimal disruption to the predicted path of the shader
@@ -142,7 +145,7 @@ let VoxelShader = module.exports = (function() {
 						material.ambientMagnitude = 0.5;
 					}
 					if (material.directionalMagnitude === undefined) {
-						console.warn("No directionalMagnitudee property specified on material using Voxel shader, setting to 0.5");
+						console.warn("No directionalMagnitude property specified on material using Voxel shader, setting to 0.5");
 						material.directionalMagnitude = 0.5;
 					}
 				}
