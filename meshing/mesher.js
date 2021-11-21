@@ -14,19 +14,15 @@ let Vorld = require('../core/vorld');
 let Chunk = require('../core/chunk');
 let Maths = require('../core/maths');
 let Cardinal = require('../core/cardinal');
+let Primitives = require('../core/primitives');
 let Utils = require('../core/utils');
 let Direction = Cardinal.Direction;
 
-let Mesher = module.exports = (function(){
+module.exports = (function(){
 	let exports = {};
 
 	// Cube mesh data - faces in order of cardinal directions
-	let cubeJson = {
-		vertices: [ 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0 ],
-		normals: [ 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0],
-		textureCoordinates: [ 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0 ],
-		indices: [ 0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11, 12, 13, 14, 12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23 ]
-	};
+	let cubeJson = Primitives.createCuboidMeshJson(0, 1, 0, 1, 0, 1);
 
 	let concat = function(a, b) {
 		// GC efficient concat
@@ -206,7 +202,7 @@ let Mesher = module.exports = (function(){
 			// leaves / cutout block making them more readable, as if they are catching the light / imples 
 			// they aren't flat so am  leaving this here rather than moving the calculation to normals
 			tileIndices[index] += calculateAOLevel(vorld, vector, direction, i, j, k, chunkI, chunkJ, chunkK);
-			let light = 0;
+			let light = 0, sunlight = 0;
 			if (blockDef && blockDef.light) {
 				// Use own light if a light emitting block
 				light = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j, k);
@@ -249,7 +245,11 @@ let Mesher = module.exports = (function(){
 			}
 		}
 	
-		offset = localDirection * 8;
+		if (blockDef.rotateTextureCoords) {
+			offset = localDirection * 8;
+		} else {
+			offset = direction * 8;
+		}
 		textureCoordinates = cubeJson.textureCoordinates.slice(offset, offset + 8);
 
 		concat(mesh.vertices, vertices);
@@ -314,7 +314,7 @@ let Mesher = module.exports = (function(){
 			tileIndex += calculateAOLevel(vorld, vertex, direction, i, j, k, chunkI, chunkJ, chunkK);
 			tileIndices.push(tileIndex);
 
-			let light = 0;
+			let light = 0, sunlight = 0;
 			if (blockDef && blockDef.light) {
 				// Use own light if a light emitting block
 				light = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j, k);
@@ -336,9 +336,38 @@ let Mesher = module.exports = (function(){
 			indices.push(customMesh.indices[index] + n);
 		}
 
+		let textureCoordinates = customMesh.textureCoordinates;
+		if (!blockDef.rotateTextureCoords) {
+			textureCoordinates = [];
+			for (let index = 0, l = vertices.length; index < l; index += 3) {
+				normal[0] = normals[index];
+				normal[1] = normals[index + 1];
+				normal[2] = normals[index + 2];
+
+				vertex[0] = vertices[index];
+				vertex[1] = vertices[index + 1];
+				vertex[2] = vertices[index + 2];
+
+				// NOTE assumes normalized AA normals
+				if (Maths.approximately(Math.abs(normal[0]), 1, 0.001)) {
+					// Use z/y coords
+					textureCoordinates.push(vertex[2] - k);
+					textureCoordinates.push(vertex[1] - j);
+				} else if (Maths.approximately(Math.abs(normal[1]), 1, 0.001)) {
+					// Use x/z coords
+					textureCoordinates.push(vertex[0] - i);
+					textureCoordinates.push(vertex[2] - k);
+				} else {
+					// Use x/y coords
+					textureCoordinates.push(vertex[0] - i);
+					textureCoordinates.push(vertex[1] - j);
+				}
+			}
+		}
+
 		concat(mesh.vertices, vertices);
 		concat(mesh.normals, normals);
-		concat(mesh.textureCoordinates, customMesh.textureCoordinates);
+		concat(mesh.textureCoordinates, textureCoordinates);
 		concat(mesh.tileIndices, tileIndices);
 		concat(mesh.lightBake, lightBake);
 		concat(mesh.indices, indices);
