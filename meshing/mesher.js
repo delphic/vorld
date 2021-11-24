@@ -351,7 +351,11 @@ module.exports = (function(){
 				// NOTE assumes normalized AA normals
 				if (Maths.approximately(Math.abs(normal[0]), 1, 0.001)) {
 					// Use z/y coords
-					textureCoordinates.push(vertex[2] - k);
+					if (normal[0] < 0) {
+						textureCoordinates.push(vertex[2] - k);
+					} else {
+						textureCoordinates.push(1.0 - (vertex[2] - k));
+					}
 					textureCoordinates.push(vertex[1] - j);
 				} else if (Maths.approximately(Math.abs(normal[1]), 1, 0.001)) {
 					// Use x/z coords
@@ -359,7 +363,11 @@ module.exports = (function(){
 					textureCoordinates.push(vertex[2] - k);
 				} else {
 					// Use x/y coords
-					textureCoordinates.push(vertex[0] - i);
+					if (normal[2] > 0) {
+						textureCoordinates.push(vertex[0] - i);
+					} else {
+						textureCoordinates.push(1.0 - (vertex[0] - i));
+					}
 					textureCoordinates.push(vertex[1] - j);
 				}
 			}
