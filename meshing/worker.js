@@ -47,7 +47,7 @@ onmessage = function(e) {
 		for (let j = bounds.jMin; j <= bounds.jMax; j++) {
 			for (let k = bounds.kMin; k <= bounds.kMax; k++) {
 				count++;
-				let mesh = null, cutoutMesh = null;
+				let mesh = null, cutoutMesh = null, unlitMesh = null;
 				alphaMeshes.length = 0;
 				let chunk = Vorld.getChunk(vorld, i, j, k);
 				if (chunk) {
@@ -55,6 +55,7 @@ onmessage = function(e) {
 					// save ourselves the createMesh calls for cutoutMesh and alphaMeshes
 					mesh = Mesher.createMesh(vorld, chunk, atlas);
 					cutoutMesh = Mesher.createMesh(vorld, chunk, atlas, null, true);
+					unlitMesh = Mesher.createMesh(vorld, chunk, atlas, null, false, true);
 					for (let n = 0; n < alphaBlocks.length; n++) {
 						alphaMeshes[n] = Mesher.createMesh(vorld, chunk, atlas, alphaBlocks[n]);
 					}
@@ -75,6 +76,15 @@ onmessage = function(e) {
 						chunkIndices: chunk.indices,
 						progress: count / totalRange,
 						cutout: true
+					});
+					postedMesh = true;
+				}
+				if (unlitMesh && unlitMesh.indices.length) {
+					this.postMessage({
+						mesh: unlitMesh,
+						chunkIndices: chunk.indices,
+						progress: count / totalRange,
+						unlit: true
 					});
 					postedMesh = true;
 				}

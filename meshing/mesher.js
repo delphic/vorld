@@ -389,7 +389,7 @@ module.exports = (function(){
 		out[2] += k;
 	};
 
-	exports.createMesh = function(vorld, chunk, atlas, alphaBlockToMesh, meshCutout) {
+	exports.createMesh = function(vorld, chunk, atlas, alphaBlockToMesh, meshCutout, meshUnlit) {
 		// Vorld can be whole set of data or a slice, however adjacent chunks
 		// should be provide to avoid unnecessary internal faces.
 		if (!chunk) {
@@ -425,7 +425,11 @@ module.exports = (function(){
 			let isBlockOpaque = Vorld.isBlockTypeOpaque(vorld, block);
 			let isBlockAlpha = Vorld.isBlockTypeAlpha(vorld, block);
 			let isBlockCutout = blockDefinition.useCutout;
+			let isBlockUnlit = blockDefinition.useUnlit;
+
+			// TODO: Generalise this material difference into single parameter - and separate alpha material from current alpha meshing rules
 			if ((!meshCutout && isBlockCutout) || (meshCutout && !isBlockCutout)) { return; } // cutout blocks get their own mesh
+			if ((!meshUnlit && isBlockUnlit) || (meshUnlit && !isBlockUnlit)) { return; } // unlit blocks get their own mesh
 			if (!alphaBlockToMesh && isBlockAlpha) { return; } // alpha blocks get their own mesh
 
 			// Custom mesh, just put it in!
