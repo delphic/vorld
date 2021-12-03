@@ -12,7 +12,7 @@
 let Chunk = require('./chunk');
 let Cardinal = require('./cardinal');
 
-let Vorld = module.exports = (function() {
+module.exports = (function() {
 	let exports = {};
 
 	exports.Cardinal = Cardinal;
@@ -590,7 +590,7 @@ let Vorld = module.exports = (function() {
 				exports.addChunk(vorld, chunk, chunkI, chunkJ, chunkK);	
 			}
 		} else {
-			block = Chunk.getBlock(chunk, blockI, blockJ, blockK);
+			let block = Chunk.getBlock(chunk, blockI, blockJ, blockK);
 			if (block && vorld.blockConfig) {
 				blockDef = vorld.blockConfig[block]; 
 			}
