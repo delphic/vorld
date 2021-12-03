@@ -51,6 +51,8 @@ onmessage = function(e) {
 				alphaMeshes.length = 0;
 				let chunk = Vorld.getChunk(vorld, i, j, k);
 				if (chunk) {
+					// TODO: If we were to count number of cutout and alpha blocks for the chunk we could
+					// save ourselves the createMesh calls for cutoutMesh and alphaMeshes
 					mesh = Mesher.createMesh(vorld, chunk, atlas);
 					cutoutMesh = Mesher.createMesh(vorld, chunk, atlas, null, true);
 					for (let n = 0; n < alphaBlocks.length; n++) {

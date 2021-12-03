@@ -1,4 +1,5 @@
-let VectorQueue = module.exports = (function(){
+// Vector Queue
+module.exports = (function(){
 	let exports = {};
 
 	// Could remove the need for a string key if on initialising the queue
@@ -37,9 +38,14 @@ let VectorQueue = module.exports = (function(){
 		};
 		queue.pop = () => {
 			let vector = vectors[index];
-			index += 1;
 			queue.length -= 1;
+			index += 1;
 			keys[vector[0] + "_" + vector[1] + "_" + vector[2]] = false;
+			
+			// TODO: Test if this actually generates garbage, maybe JS is smart.
+			// vectors.splice(0, 1);
+			// delete keys[vector[0] + "_" + vector[1] + "_" + vector[2]];
+			
 			return vector;
 		};
 		queue.reset = () => {

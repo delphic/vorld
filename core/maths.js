@@ -1,4 +1,4 @@
-let Maths = module.exports = (function(){
+module.exports = (function(){
 	// Subset of FuryMaths functions required by vorld
 	// Ideally would separate maths library for reuse
 	let exports = {};

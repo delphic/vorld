@@ -1,8 +1,9 @@
-const { Maths, Mesh, Bounds } = require('../../fury/src/fury');
+// Vorld Physics
+const { Maths, Mesh } = require('../../fury/src/fury');
 let Vorld = require('./vorld');
 let Utils = require('./utils');
 
-let Physics = module.exports = (function(){
+module.exports = (function(){
 	let exports = {};
 
 	let transformBoxToVorldSpace = (box, vorld, x, y, z) => {
