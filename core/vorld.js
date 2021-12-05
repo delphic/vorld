@@ -643,7 +643,7 @@ module.exports = (function() {
 	};
 
 	// Heightmap
-	let getHighestBlockY = (vorld, x, z) => {
+	let getHighestBlockY = exports.getHighestBlockY = (vorld, x, z) => {
 		let chunkI = Math.floor(x / vorld.chunkSize),
 		chunkK = Math.floor(z / vorld.chunkSize);
 		let chunkKey = chunkI + "_" + chunkK;
