@@ -145,7 +145,8 @@ module.exports = (function() {
 					"float fogAmount = 1.0 - exp2( - uFogDensity * uFogDensity * fragDistance * fragDistance * LOG2);",
 					"fogAmount = clamp(fogAmount, 0.0, 1.0);",
 
-					"fragColor =  mix(vec4(vLightWeight * color.rgb, color.a), vec4(uFogColor, 1.0), fogAmount);"
+					// Could argue that the mix should be uFogColor, 1.0 rather than color.a for normal alpha but that messes with cutout shaders
+					"fragColor =  mix(vec4(vLightWeight * color.rgb, color.a), vec4(uFogColor, color.a), fogAmount);"
 			];
 			if (cutoutThreshold) {
 				// Cutout shader - note putting the if at the end has minimal disruption to the predicted path of the shader
