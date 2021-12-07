@@ -1,7 +1,6 @@
 // Seedable 'random' number generators for use with generation
 // As Math.random can not be seeded.
-
-let Random = module.exports = (function() {
+module.exports = (function() {
 	let exports = {};
 
 	exports.fromString = function(seed) {
@@ -13,7 +12,7 @@ let Random = module.exports = (function() {
 		}
 		
 		let number = function(index) {
-			return (seed.charCodeAt(index) - (minCode - 0.0001)) / (maxCode + 0.001);
+			return (seed.charCodeAt(index) - (minCode - 0.0001)) / (maxCode - minCode + 0.001);
 		};
 
 		let i = 0, j = Math.floor(seed.length*number(0));
