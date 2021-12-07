@@ -39,12 +39,13 @@ module.exports = (function(){
 		queue.pop = () => {
 			let vector = vectors[index];
 			queue.length -= 1;
-			index += 1;
-			keys[vector[0] + "_" + vector[1] + "_" + vector[2]] = false;
+			//index += 1;
+			//keys[vector[0] + "_" + vector[1] + "_" + vector[2]] = false;
 			
-			// TODO: Test if this actually generates garbage, maybe JS is smart.
-			// vectors.splice(0, 1);
-			// delete keys[vector[0] + "_" + vector[1] + "_" + vector[2]];
+			// This is probably slower, especially with the delete
+			// however we're getting out of memory exceptions sometimes...
+			vectors.splice(0, 1);
+			delete keys[vector[0] + "_" + vector[1] + "_" + vector[2]];
 			
 			return vector;
 		};
