@@ -229,6 +229,7 @@ module.exports = (function() {
 			// Ignoring points where an ajacent chunk has a higher max
 			// it is possible there are separate maxima however, they aren't far apart
 			// so it's probably fine to treat them as the same.
+			/*
 			let chunkI = Math.floor(chunkMaxima[i][0] / vorld.chunkSize);
 			let chunkK = Math.floor(chunkMaxima[i][2] / vorld.chunkSize);
 			let keys = [ 
@@ -251,7 +252,7 @@ module.exports = (function() {
 				// so skip it
 				evaluatedPointIndices[i] = true;
 				continue;
-			}
+			}*/
 
 			let foundPathToWater = false;
 			let foundHigherAdjacentPoint = false;
@@ -369,26 +370,6 @@ module.exports = (function() {
 
 		return result;
 	};
-
-	// Potential - Area finder version:
-	// specify bounds x/z
-	// Pseudo Code
-	// start at some point within the bounds
-	// create terrace object { height: y, points: [] } // add start point
-	// BFS adding points of same height
-	// if find higher -> prioritise and create new island/terrace object with parent: link to terrace below - add childCount to parent
-		// alternative don't prioritise the higher, finish the BFS at this height - this avoids the arches problem 
-		// => new lower points when searching higher just go in a new shape
-		// however this doesn't mean they're not connected - could query the vorld directly instead?
-	// if find lower -> store if inside the bounds 
-	// when finished BFS same height if childCount = 0, add to maxima result object
-	// go over stored lower points, if have parent add to that, else create a new one.
-		// Use same logic as above to analyse
-
-	// Note there may be gaps in heights between parent / child - some will be there legitmately other's will require inserting a new terrace inbetween
-
-	// NOTE: with this psuedo code arches will treat objects same height on either side of the arch as part of the same terrace not different ones
-	// NOTE: requires an horizontally adjacent block for terraces to be whole - diagonally adjacent blocks will not be considered
-
+	
 	return exports;
 })(); 
