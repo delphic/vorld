@@ -102,5 +102,72 @@ module.exports = (function(){
 		};
 	};
 
+	// Creates a (0,0) -> (1,1) Quad that is either x/y, x/z or z/y, with value of the axis to 'lock' provided
+	exports.createQuadMeshJson = (axis, value, normal) => {
+		let json =  null;
+		if (axis == 0) {
+			json = {
+				vertices: [
+					value, 0.0, 0.0,
+					value, 0.0, 1.0,
+					value, 1.0, 1.0,
+					value, 1.0, 0.0 ],
+				normals: [
+					normal, 0.0, 0.0, 
+					normal, 0.0, 0.0,
+					normal, 0.0, 0.0,
+					normal, 0.0, 0.0 ],
+				textureCoordinates: [
+					0.0, 0.0,
+					1.0, 0.0,
+					1.0, 1.0,
+					0.0, 1.0 ]
+			};
+		} else if (axis == 2) {
+			json = {
+				vertices: [
+					0.0, 0.0, value,
+					1.0, 0.0, value,
+					1.0, 1.0, value,
+					0.0, 1.0, value ],
+				normals: [
+					0.0, 0.0, normal, 
+					0.0, 0.0, normal,
+					0.0, 0.0, normal,
+					0.0, 0.0, normal ],
+				textureCoordinates: [
+					0.0, 0.0,
+					1.0, 0.0,
+					1.0, 1.0,
+					0.0, 1.0 ]
+			};
+		} else {
+			json = {
+				vertices: [
+					0.0, value, 0.0,
+					1.0, value, 0.0,
+					1.0, value, 1.0,
+					0.0, value, 1.0 ],
+				normals: [
+					0.0, normal, 0.0, 
+					0.0, normal, 0.0,
+					0.0, normal, 0.0,
+					0.0, normal, 0.0 ],
+				textureCoordinates: [
+					0.0, 0.0,
+					1.0, 0.0,
+					1.0, 1.0,
+					0.0, 1.0 ]
+			};
+		}
+		
+		if (normal > 0) {
+			json.indices = [ 0, 1, 2, 0, 2, 3 ];
+		} else {
+			json.indices = [ 0, 2, 1, 0, 3, 2 ];
+		}
+		return json;
+	};
+
 	return exports;
 })();
