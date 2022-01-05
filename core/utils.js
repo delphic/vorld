@@ -1,7 +1,7 @@
 let Cardinal = require('./cardinal');
 let Maths = require('./maths');
 
-let Utils = module.exports = (function() {
+module.exports = (function() {
 	let exports = {};
 
 	exports.transformPointToVorldSpace = (vector, rotation, x, y, z) => {
@@ -39,7 +39,7 @@ let Utils = module.exports = (function() {
 			return result;
 		};
 	
-		rotationQuats = [];
+		let rotationQuats = [];
 
 		rotationQuats[Cardinal.Rotation.upForward] = createQuat();
 		rotationQuats[Cardinal.Rotation.upRight] = createQuat([[0,1,0]]);

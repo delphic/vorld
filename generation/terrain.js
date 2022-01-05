@@ -13,7 +13,7 @@ let Random = require('../noise/random');
 let Vorld = require('../core/vorld');
 
 // Note directly adding to chunks and chunks to vorld to minimise maths
-let TerrainGenerator = module.exports = (function() {
+module.exports = (function() {
 	let exports = {};
 	let prototype = {
 		generateChunk: function(vorld, chunkI, chunkJ, chunkK) {

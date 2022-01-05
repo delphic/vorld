@@ -1,6 +1,6 @@
 let Maths = require('./maths');
 
-let Cardinal = module.exports = (function() { 
+module.exports = (function() { 
 	let exports = {};
 
 	let Direction = exports.Direction = {

@@ -1,4 +1,4 @@
-let ShapingFunctions = module.exports = (function(){
+module.exports = (function(){
 	let exports = {};
 
 	let Name = exports.Name = {
@@ -27,7 +27,7 @@ let ShapingFunctions = module.exports = (function(){
 				default:
 					return (x, y, z) => 0;
 			}
-		} 
+		}
 		return (x, y, z) => 0;
 	};
 

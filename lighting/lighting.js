@@ -1,6 +1,6 @@
 let Vorld = require('../core/vorld');
 
-let Lighting = module.exports = (function(){
+module.exports = (function(){
 	let exports = {};
 
 	exports.performLightingPass = (vorld, bounds, progressDelegate) => {
@@ -22,8 +22,9 @@ let Lighting = module.exports = (function(){
 
 			// Question - is this repeated flood fill on neighbouring blocks the fastest way? 
 			// For certain configurations might it be better to min -> max -> half -> quarter etc) or is it precisely the same? 
-			for (let i = 0, l = vorld.chunkSize; i < l; i++) {
-				for (let k = 0; k < l; k++) {
+			let l = vorld.chunkSize;
+			for (let k = 0; k < l; k++) {
+				for (let i = 0; i < l; i++) {
 					let x = chunkI * l + i,
 						y = heightMapEntry.maxChunkIndex * l + 15,
 						z = chunkK * l + k;

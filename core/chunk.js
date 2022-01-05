@@ -7,7 +7,7 @@
 // entire chunk do not exceed the maximum number of vertices supported.
 let Cardinal = require('./cardinal');
 
-let Chunk = module.exports = (function() {
+module.exports = (function() {
 	let exports = {};
 
 	// Whilst we're not preallocating the entire array if we were to key as

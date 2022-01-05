@@ -3,6 +3,7 @@ const Vorld = require('../core/vorld');
 module.exports = (function(){
 	let exports = {};
 
+	// TODO: Move to random  utils
 	let randomIntInRange = (min, max) => {
 		return min + Math.floor((Math.random() * (max - min + 1)));
 	};
