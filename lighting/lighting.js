@@ -14,11 +14,8 @@ module.exports = (function(){
 			let chunkI = heightMapEntry.chunkI,
 				chunkK = heightMapEntry.chunkK;
 		
-			// Only add sunlight inside bounds (note BFS still searches outside bounds this is necessary for certain cases)
-			if (bounds && (chunkI < bounds.iMin || chunkI > bounds.iMax || chunkK < bounds.kMin || chunkK > bounds.kMax)) {
-				progressDelegate();
-				continue;
-			}
+			// NOTE: Even though we're only copying back bounds we need to run for the adjacent chunks heightmap areas
+			// too as they may be required to propogate light into overhangs
 
 			// Question - is this repeated flood fill on neighbouring blocks the fastest way? 
 			// For certain configurations might it be better to min -> max -> half -> quarter etc) or is it precisely the same? 
