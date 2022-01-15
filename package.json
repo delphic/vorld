@@ -1,0 +1,15 @@
+{
+	"name": "vorld",
+	"version": "0.1.0",
+	"description": "helpers for generating voxel works",
+	"author": "delphic",
+	"license": "MIT",
+	"homepage": "https://github.com/delphic/vorld/",
+	"dependencies": {
+		"fury": "delphic/fury"
+	},
+	"private": true,
+	"devDependencies": {
+		"eslint": "^8.2.0"
+	}
+}

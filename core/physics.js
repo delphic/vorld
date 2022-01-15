@@ -1,5 +1,5 @@
 // Vorld Physics
-const { Maths, Mesh } = require('../../fury/src/fury');
+const { Maths, Mesh } = require('fury');
 let Vorld = require('./vorld');
 let Utils = require('./utils');
 

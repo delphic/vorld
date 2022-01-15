@@ -275,7 +275,7 @@ module.exports = (function() {
 	exports.reverseTransformDirection = (direction, rotation) => {
 		// Return the direction if it were rotated by rotation would give the provided direction
 		getVectorFromDirection(vec, direction);
-		Maths.invertQuat(getQuatFromRotation(quat, rotation));
+		Maths.invertQuat(quat, getQuatFromRotation(quat, rotation));
 		Maths.transformVecByQuat(vec, vec, quat);
 		return getDirectionFromVector(vec);
 	};
