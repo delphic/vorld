@@ -8,8 +8,8 @@
 
 // Note generates from higher y to lower, in order to facilitate transformation of top tiles 
 
+let { Random } = require('fury');
 let Perlin = require('../noise/perlin');
-let Random = require('../noise/random');
 let Vorld = require('../core/vorld');
 
 // Note directly adding to chunks and chunks to vorld to minimise maths
@@ -88,8 +88,9 @@ module.exports = (function() {
 		generator.weightings = config.weightings;
 		generator.totalWeight = 0;
 		generator.octaves = [];
+		Random.setSeed(generator.seed);
 		for (let o = 0; o < generator.weightings.length; o++) {
-			generator.octaves.push(Perlin.create(Random.fromString(generator.seed)));
+			generator.octaves.push(Perlin.create(Random.value));
 			generator.totalWeight += generator.weightings[o];
 		}
 		generator.shapingFunction = config.shapingFunction;
