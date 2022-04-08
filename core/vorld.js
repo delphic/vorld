@@ -238,7 +238,7 @@ module.exports = (function() {
 		return 0;
 	};
 
-	let getBlockSunlight = function(vorld, x, y, z) {
+	let getBlockSunlight = exports.getBlockSunlight = function(vorld, x, y, z) {
 		let size = vorld.chunkSize;
 		let chunkI = Math.floor(x / size),
 			chunkJ = Math.floor(y / size),
