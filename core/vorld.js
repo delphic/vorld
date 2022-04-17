@@ -262,6 +262,16 @@ module.exports = (function() {
 		return 1;
 	}
 
+	// There is some naming confusion around 'light' for light level and 'light' for block def emission
+	let getDefLightAtPos = function(vorld, pos) {
+		let block = exports.getBlock(vorld, pos[0], pos[1], pos[2]);
+		let def = exports.getBlockTypeDefinition(vorld, block);
+		if (def && def.light) {
+			return def.light;
+		}
+		return 0;
+	};
+
 	exports.getBlockLightByIndex = function(vorld, chunkI, chunkJ, chunkK, blockI, blockJ, blockK) {
 		if (blockI >= vorld.chunkSize) {
 			blockI = blockI - vorld.chunkSize;
@@ -336,7 +346,7 @@ module.exports = (function() {
 			newLight = prevLightLevel - (attenuation - 1);
 			// Note - is overzealous for cases where prev attenuation > 1
 		}
-		if (prevLightLevel > newLight) {
+		if (prevLightLevel > newLight) { // Don't bother to removeLight if prevLightLevel is 0? 
 			removeLight(vorld, x, y, z, removalQueue, propagationQueue);
 		}
 
@@ -408,53 +418,67 @@ module.exports = (function() {
 		}
 	};
 
+	let checkPositionForRemoval = function(vorld, adjacentLightLevel, pos, queue, backfillQueue) {
+		let lightLevel = getBlockLight(vorld, pos[0], pos[1], pos[2]);
+		if (lightLevel) {
+			// if (lightLevel < adjacentLightLevel) {
+			// 	queue.push(pos[0], pos[1], pos[2]);
+			// } else if (lightLevel) {
+			// 	backfillQueue.push(pos[0], pos[1], pos[2]);
+			// }
+			let neighbourLight = getDefLightAtPos(vorld, pos);
+			if (lightLevel < adjacentLightLevel) {
+				queue.push(pos[0], pos[1], pos[2]);
+			}
+			if (lightLevel >= adjacentLightLevel || neighbourLight) {
+				backfillQueue.push(pos[0], pos[1], pos[2]);
+			}
+		}
+	};
+
 	let removeLight = function(vorld, x, y, z, queue, backfillQueue) {
 		queue.push(x, y, z);
 		while (queue.length) {
 			let pos = queue.pop();
-			let neighbourLight = 0;
 			let light = getBlockLight(vorld, pos[0], pos[1], pos[2]);
 			
-			neighbourLight = getBlockLight(vorld, pos[0] + 1, pos[1], pos[2]);
-			if (neighbourLight && neighbourLight < light) {
-				queue.push(pos[0] + 1, pos[1], pos[2]);
-			} else if (neighbourLight) {
-				backfillQueue.push(pos[0] + 1, pos[1], pos[2]);
-			}
-			neighbourLight = getBlockLight(vorld, pos[0] - 1, pos[1], pos[2]);
-			if (neighbourLight && neighbourLight < light) {
-				queue.push(pos[0] - 1, pos[1], pos[2]);
-			} else if (neighbourLight) {
-				backfillQueue.push(pos[0] - 1, pos[1], pos[2]);
-			}
-			neighbourLight = getBlockLight(vorld, pos[0], pos[1] + 1, pos[2]);
-			if (neighbourLight && neighbourLight < light) {
-				queue.push(pos[0], pos[1] + 1, pos[2]);
-			} else if (neighbourLight) {
-				backfillQueue.push(pos[0], pos[1] + 1, pos[2]);
-			}
-			neighbourLight = getBlockLight(vorld, pos[0], pos[1] - 1, pos[2]);
-			if (neighbourLight && neighbourLight < light) {
-				queue.push(pos[0], pos[1] - 1, pos[2]);
-			} else if (neighbourLight) {
-				backfillQueue.push(pos[0], pos[1] - 1, pos[2]);
-			}
-			neighbourLight = getBlockLight(vorld, pos[0], pos[1], pos[2] + 1);
-			if (neighbourLight && neighbourLight < light) {
-				queue.push(pos[0], pos[1], pos[2] + 1);
-			} else if (neighbourLight) {
-				backfillQueue.push(pos[0], pos[1], pos[2] + 1);
-			}
-			neighbourLight = getBlockLight(vorld, pos[0], pos[1], pos[2] - 1);
-			if (neighbourLight && neighbourLight < light) {
-				queue.push(pos[0], pos[1], pos[2] - 1);
-			} else if (neighbourLight) {
-				backfillQueue.push(pos[0], pos[1], pos[2] - 1);
-			}
+			pos[0] += 1;
+			checkPositionForRemoval(vorld, light, pos, queue, backfillQueue);
 
+			pos[0] -= 2;
+			checkPositionForRemoval(vorld, light, pos, queue, backfillQueue);
+
+			pos[0] += 1;
+			pos[1] += 1;
+			checkPositionForRemoval(vorld, light, pos, queue, backfillQueue);
+
+			pos[1] -= 2;
+			checkPositionForRemoval(vorld, light, pos, queue, backfillQueue);
+
+			pos[1] += 1;
+			pos[2] += 1;
+			checkPositionForRemoval(vorld, light, pos, queue, backfillQueue);
+
+			pos[2] -= 2;
+			checkPositionForRemoval(vorld, light, pos, queue, backfillQueue);
+
+			pos[2] += 1;
 			removeLightForBlock(vorld, pos[0], pos[1], pos[2]);
 		}
 		queue.reset();
+
+		// Go through backfill queue at readd any lower light levels if they are light sources
+		if (backfillQueue.length > 0) {
+			let vectors = backfillQueue.getVectors();
+			for (let i = 0, l = vectors.length; i < l; i++) {
+				let light = getDefLightAtPos(vorld, vectors[i]);
+				if (light) {
+					if (!trySetLightForBlock(vorld, vectors[i][0], vectors[i][1], vectors[i][2], light)) {
+						console.warn("Unable to set light for backfill");
+					}
+				}
+			}
+		}
 
 		if (backfillQueue.length > 0) {
 			propagateLight(vorld, backfillQueue);

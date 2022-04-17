@@ -49,6 +49,9 @@ module.exports = (function(){
 			
 			return vector;
 		};
+		queue.getVectors = () => {
+			return vectors;
+		};
 		queue.reset = () => {
 			index = 0;
 			queue.length = 0;
