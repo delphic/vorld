@@ -346,7 +346,7 @@ module.exports = (function() {
 			newLight = prevLightLevel - (attenuation - 1);
 			// Note - is overzealous for cases where prev attenuation > 1
 		}
-		if (prevLightLevel > newLight) { // Don't bother to removeLight if prevLightLevel is 0? 
+		if (prevLightLevel > 0 && prevLightLevel > newLight) {
 			removeLight(vorld, x, y, z, removalQueue, propagationQueue);
 		}
 
@@ -418,14 +418,9 @@ module.exports = (function() {
 		}
 	};
 
-	let checkPositionForRemoval = function(vorld, adjacentLightLevel, pos, queue, backfillQueue) {
+	let checkPositionForLightRemovalAndBackfill = function(vorld, adjacentLightLevel, pos, queue, backfillQueue) {
 		let lightLevel = getBlockLight(vorld, pos[0], pos[1], pos[2]);
 		if (lightLevel) {
-			// if (lightLevel < adjacentLightLevel) {
-			// 	queue.push(pos[0], pos[1], pos[2]);
-			// } else if (lightLevel) {
-			// 	backfillQueue.push(pos[0], pos[1], pos[2]);
-			// }
 			let neighbourLight = getDefLightAtPos(vorld, pos);
 			if (lightLevel < adjacentLightLevel) {
 				queue.push(pos[0], pos[1], pos[2]);
@@ -440,45 +435,38 @@ module.exports = (function() {
 		queue.push(x, y, z);
 		while (queue.length) {
 			let pos = queue.pop();
-			let light = getBlockLight(vorld, pos[0], pos[1], pos[2]);
+			let [ x, y, z ] = pos;
+			let light = getBlockLight(vorld, x, y, z);
 			
 			pos[0] += 1;
-			checkPositionForRemoval(vorld, light, pos, queue, backfillQueue);
+			checkPositionForLightRemovalAndBackfill(vorld, light, pos, queue, backfillQueue);
 
 			pos[0] -= 2;
-			checkPositionForRemoval(vorld, light, pos, queue, backfillQueue);
+			checkPositionForLightRemovalAndBackfill(vorld, light, pos, queue, backfillQueue);
 
 			pos[0] += 1;
 			pos[1] += 1;
-			checkPositionForRemoval(vorld, light, pos, queue, backfillQueue);
+			checkPositionForLightRemovalAndBackfill(vorld, light, pos, queue, backfillQueue);
 
 			pos[1] -= 2;
-			checkPositionForRemoval(vorld, light, pos, queue, backfillQueue);
+			checkPositionForLightRemovalAndBackfill(vorld, light, pos, queue, backfillQueue);
 
 			pos[1] += 1;
 			pos[2] += 1;
-			checkPositionForRemoval(vorld, light, pos, queue, backfillQueue);
+			checkPositionForLightRemovalAndBackfill(vorld, light, pos, queue, backfillQueue);
 
 			pos[2] -= 2;
-			checkPositionForRemoval(vorld, light, pos, queue, backfillQueue);
+			checkPositionForLightRemovalAndBackfill(vorld, light, pos, queue, backfillQueue);
 
 			pos[2] += 1;
 			removeLightForBlock(vorld, pos[0], pos[1], pos[2]);
-		}
-		queue.reset();
 
-		// Go through backfill queue at readd any lower light levels if they are light sources
-		if (backfillQueue.length > 0) {
-			let vectors = backfillQueue.getVectors();
-			for (let i = 0, l = vectors.length; i < l; i++) {
-				let light = getDefLightAtPos(vorld, vectors[i]);
-				if (light) {
-					if (!trySetLightForBlock(vorld, vectors[i][0], vectors[i][1], vectors[i][2], light)) {
-						console.warn("Unable to set light for backfill");
-					}
-				}
+			let lightSource = getDefLightAtPos(vorld, pos);
+			if (lightSource) {
+				trySetLightForBlock(vorld, x, y, z, lightSource);
 			}
 		}
+		queue.reset();
 
 		if (backfillQueue.length > 0) {
 			propagateLight(vorld, backfillQueue);
