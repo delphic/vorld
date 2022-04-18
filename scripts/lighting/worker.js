@@ -1,5 +1,5 @@
 let Lighting = require('./lighter');
-let Vorld = require('../core/vorld');
+let Vorld = require('../world');
 
 onmessage = function(e) {
 

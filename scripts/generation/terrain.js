@@ -10,7 +10,7 @@
 
 let { Random } = require('fury');
 let Perlin = require('../noise/perlin');
-let Vorld = require('../core/vorld');
+let Vorld = require('../world');
 
 // Note directly adding to chunks and chunks to vorld to minimise maths
 module.exports = (function() {

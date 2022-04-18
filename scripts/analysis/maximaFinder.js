@@ -1,4 +1,4 @@
-const Vorld = require('../core/vorld');
+const Vorld = require('../world');
 
 // Maxima finder, analyses the heightmap of generated terrain
 module.exports = (function() {

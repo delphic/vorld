@@ -10,12 +10,12 @@
 // Uses texture coordinates and an atlas to allow for multiple voxel types in  a single texture.
 // Has option of outputing texture coordinates as a tile lookup rather than uv mapping.
 
-let Vorld = require('../core/vorld');
-let Chunk = require('../core/chunk');
-let Maths = require('../core/maths');
-let Cardinal = require('../core/cardinal');
-let Primitives = require('../core/primitives');
-let Utils = require('../core/utils');
+let Vorld = require('../world');
+let Chunk = require('../chunk');
+let Maths = require('../maths');
+let Cardinal = require('../cardinal');
+let Primitives = require('../primitives');
+let Utils = require('../utils');
 let Direction = Cardinal.Direction;
 
 module.exports = (function(){

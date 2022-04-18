@@ -1,5 +1,5 @@
 const { Random } = require('fury');
-const Vorld = require('../core/vorld');
+const Vorld = require('../world');
 
 module.exports = (function(){
 	let exports = {};

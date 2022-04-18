@@ -5,7 +5,7 @@
 
 // Sends progress update when no mesh is required
 // Sends complete message once vorld slice is fully meshed
-let Vorld = require('../core/vorld');
+let Vorld = require('../world');
 let Mesher = require('./mesher');
 
 onmessage = function(e) {

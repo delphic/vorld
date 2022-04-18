@@ -1,6 +1,7 @@
 module.exports = (function(){
 	let exports = {};
 
+	// TODO: Move to Heightmap module?
 	exports.calculateMeanAndVariance = (out, heightMap) => {
 		let keys = Object.keys(heightMap);
 

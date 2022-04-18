@@ -1,4 +1,4 @@
-let Vorld = require('../core/vorld');
+let Vorld = require('../world');
 
 module.exports = (function(){
 	let exports = {};

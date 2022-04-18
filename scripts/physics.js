@@ -1,6 +1,6 @@
 // Vorld Physics
 const { Maths, Mesh } = require('fury');
-let Vorld = require('./vorld');
+let Vorld = require('./world');
 let Utils = require('./utils');
 
 module.exports = (function(){
