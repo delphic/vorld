@@ -14,6 +14,7 @@ let Vorld = require('../world');
 let Chunk = require('../chunk');
 let Maths = require('../maths');
 let Cardinal = require('../cardinal');
+let Lighting = require('../lighting');
 let Primitives = require('../primitives');
 let Utils = require('../utils');
 let Direction = Cardinal.Direction;
@@ -209,8 +210,8 @@ module.exports = (function(){
 				sunlight = Vorld.getBlockSunlightByIndex(vorld, chunkI, chunkJ, chunkK, i, j, k);
 			} else {
 				// else get the adjacent blocks light
-				light = calculateLightLevel(vorld, vector, direction, i , j, k, chunkI, chunkJ, chunkK, Vorld.getBlockLightByIndex);
-				sunlight = calculateLightLevel(vorld, vector, direction, i , j, k, chunkI, chunkJ, chunkK, Vorld.getBlockSunlightByIndex);
+				light = calculateLightLevel(vorld, vector, direction, i , j, k, chunkI, chunkJ, chunkK, Lighting.getBlockLightByIndex);
+				sunlight = calculateLightLevel(vorld, vector, direction, i , j, k, chunkI, chunkJ, chunkK, Lighting.getBlockSunlightByIndex);
 			}
 			lightBake.push(light + (sunlight / 16));
 			// We could at this meshing stage determine the orientation of the triangles based on AO first then lighting to remove the diagonal
@@ -317,13 +318,13 @@ module.exports = (function(){
 			let light = 0, sunlight = 0;
 			if (blockDef && blockDef.light) {
 				// Use own light if a light emitting block
-				light = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j, k);
-				sunlight = Vorld.getBlockSunlightByIndex(vorld, chunkI, chunkJ, chunkK, i, j, k);
+				light = Lighting.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j, k);
+				sunlight = Lighting.getBlockSunlightByIndex(vorld, chunkI, chunkJ, chunkK, i, j, k);
 			} else {
 				// else get the adjacent blocks light
 				// NOTE: assumes normal is axis aligned unit vector
-				light = calculateLightLevel(vorld, vertex, direction, i , j, k, chunkI, chunkJ, chunkK, Vorld.getBlockLightByIndex);
-				sunlight = calculateLightLevel(vorld, vertex, direction, i , j, k, chunkI, chunkJ, chunkK, Vorld.getBlockSunlightByIndex);
+				light = calculateLightLevel(vorld, vertex, direction, i , j, k, chunkI, chunkJ, chunkK, Lighting.getBlockLightByIndex);
+				sunlight = calculateLightLevel(vorld, vertex, direction, i , j, k, chunkI, chunkJ, chunkK, Lighting.getBlockSunlightByIndex);
 			}
 			lightBake.push(light + (sunlight / 16));
 

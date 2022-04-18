@@ -4,6 +4,10 @@ let Maths = require('./maths');
 module.exports = (function() {
 	let exports = {};
 
+	exports.getChunkKey = function(i, j, k) {
+		return i + "_" + j + "_" + k;
+	};
+
 	// By convention, it is expected you will deconstruct the result of this Util method
 	let adjustChunkIndicesResult = [];
 	exports.adjustChunkIndices = function(chunkSize, chunkI, chunkJ, chunkK, blockI, blockJ, blockK) {
@@ -49,12 +53,15 @@ module.exports = (function() {
 		let blockI = x - (chunkI * size),
 			blockJ = y - (chunkJ * size),
 			blockK = z - (chunkK * size);
+
 		getIndicesResult[0] = chunkI;
 		getIndicesResult[1] = chunkJ;
 		getIndicesResult[2] = chunkK;
 		getIndicesResult[3] = blockI;
 		getIndicesResult[4] = blockJ;
 		getIndicesResult[5] = blockK;
+
+		return getIndicesResult;
 	};
 
 	exports.transformPointToVorldSpace = (vector, rotation, x, y, z) => {

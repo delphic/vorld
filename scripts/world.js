@@ -4,45 +4,31 @@
 // where i, j, k are indices which represent the x, y, z positions of the chunks
 
 // Operations on vorld data are performed using functions stored on the module
-// e.g. Vorld.addBlock(vorldToAddTo, x, y, z, block);
+// e.g. Vorld.setBlock(vorldToAddTo, x, y, z, block, up, forward);
 
 // Default chunk size defined as 16 so that meshes generated for an 
 // entire chunk do not exceed the maximum number of vertices supported.
 
-let Chunk = require('./chunk');
-let Utils = require('./utils');
+const Chunk = require('./chunk');
+const Utils = require('./utils');
 
 module.exports = (function() {
 	let exports = {};
 
-	let getKey = function(i, j, k) {
-		return i + "_" + j + "_" + k;
-	};
-
 	exports.addChunk = function(vorld, chunk, i, j, k) {
-		vorld.chunks[getKey(i, j, k)] = chunk;
+		vorld.chunks[Utils.getChunkKey(i, j, k)] = chunk;
 		chunk.indices = [i, j, k];
 	};
 
 	exports.getChunk = function(vorld, i, j, k) {
-		let key = getKey(i, j, k);
+		let key = Utils.getChunkKey(i, j, k);
 		if (vorld.chunks[key]) return vorld.chunks[key];
 		return null;
 	};
 
-	exports.addBlock = function(vorld, x, y, z, block, up, forward) {
+	exports.setBlock = function(vorld, x, y, z, block, up, forward) {
 		let [ chunkI, chunkJ, chunkK, blockI, blockJ, blockK ] = Utils.getIndices(vorld.chunkSize, x, y, z);
-
-		let previousBlock = exports.getBlockByIndex(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK);
-		let previousYMax = getHighestBlockY(vorld, x, z);
 		setBlockByIndex(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK, block, up, forward);
-		// Update Sunlight
-		if (block) {
-			removeSunlight(vorld, x, y, z, removalQueue, propagationQueue);
-		} else if (y == previousYMax) {
-			addSunlight(vorld, x, previousYMax + 1, z); // Potn BUG: what if previousYMax is also the very top of the world? Should do min of max value and prevYMax + 1
-		}
-		updateLightForBlock(vorld, x, y, z, previousBlock, block);
 	};
 
 	exports.getBlock = function(vorld, x, y, z) {
@@ -60,8 +46,8 @@ module.exports = (function() {
 	};
 
 	exports.getBlockByIndex = function(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK) {
-		[ chunkI, chunkK, chunkK, blockI, blockJ, blockK ] = Utils.adjustChunkIndices(vorld.chunkSize, chunkI, chunkJ, chunkK, blockI, blockJ, blockK);
-		getBlockByIndex(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK);
+		[ chunkI, chunkJ, chunkK, blockI, blockJ, blockK ] = Utils.adjustChunkIndices(vorld.chunkSize, chunkI, chunkJ, chunkK, blockI, blockJ, blockK);
+		return getBlockByIndex(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK);
 	};
 
 	exports.getBlockUp = function(vorld, x, y, z) {
@@ -106,7 +92,7 @@ module.exports = (function() {
 	};
 
 	exports.setBlockByIndex = function(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK, block, up, forward) {
-		[ chunkI, chunkK, chunkK, blockI, blockJ, blockK ] = Utils.adjustChunkIndices(vorld.chunkSize, chunkI, chunkJ, chunkK, blockI, blockJ, blockK);
+		[ chunkI, chunkJ, chunkK, blockI, blockJ, blockK ] = Utils.adjustChunkIndices(vorld.chunkSize, chunkI, chunkJ, chunkK, blockI, blockJ, blockK);
 		setBlockByIndex(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK, block, up, forward);
 	};
 
@@ -156,369 +142,8 @@ module.exports = (function() {
 		return null;
 	};
 
-	// Lighting
-	let getBlockLight = exports.getBlockLight = function(vorld, x, y, z) {
-		let [ chunkI, chunkJ, chunkK, blockI, blockJ, blockK ] = Utils.getIndices(vorld.chunkSize, x, y, z);
-		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
-		if (chunk) {
-			return Chunk.getBlockLight(chunk, blockI, blockJ, blockK);
-		}
-		return 0;
-	};
-
-	let getBlockSunlight = exports.getBlockSunlight = function(vorld, x, y, z) {
-		let [ chunkI, chunkJ, chunkK, blockI, blockJ, blockK ] = Utils.getIndices(vorld.chunkSize, x, y, z);
-		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
-		if (chunk) {
-			return Chunk.getBlockSunlight(chunk, blockI, blockJ, blockK);
-		}
-		return 0;
-	};
-
-	let getBlockAttenuation = function(vorld, x, y, z) {
-		let block = exports.getBlock(vorld, x, y, z);
-		let def = exports.getBlockTypeDefinition(vorld, block);
-		if (def && def.attenuation) {
-			return def.attenuation;
-		}
-		return 1;
-	}
-
-	// There is some naming confusion around 'light' for light level and 'light' for block def emission
-	let getDefLightAtPos = function(vorld, pos) {
-		let block = exports.getBlock(vorld, pos[0], pos[1], pos[2]);
-		let def = exports.getBlockTypeDefinition(vorld, block);
-		if (def && def.light) {
-			return def.light;
-		}
-		return 0;
-	};
-
-	exports.getBlockLightByIndex = function(vorld, chunkI, chunkJ, chunkK, blockI, blockJ, blockK) {
-		[ chunkI, chunkK, chunkK, blockI, blockJ, blockK ] = Utils.adjustChunkIndices(vorld.chunkSize, chunkI, chunkJ, chunkK, blockI, blockJ, blockK);
-
-		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
-		if (chunk) {
-			return Chunk.getBlockLight(chunk, blockI, blockJ, blockK);
-		}
-		return 0;
-	};
-
-	exports.getBlockSunlightByIndex = function(vorld, chunkI, chunkJ, chunkK, blockI, blockJ, blockK) {
-		[ chunkI, chunkK, chunkK, blockI, blockJ, blockK ] = Utils.adjustChunkIndices(vorld.chunkSize, chunkI, chunkJ, chunkK, blockI, blockJ, blockK);
-
-		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
-		if (chunk) {
-			return Chunk.getBlockSunlight(chunk, blockI, blockJ, blockK);
-		}
-		return 0;
-	};
-
-	let VectorQueue = require('./vectorQueue');
-	let propagationQueue = VectorQueue.create();
-	let removalQueue = VectorQueue.create();
-
-	let updateLightForBlock = function(vorld, x, y, z, previousBlock, newBlock) {
-		let prevLightLevel = getBlockLight(vorld, x, y, z);
-		let prevBlockDef = vorld.blockConfig ? vorld.blockConfig[previousBlock] : null; 
-		let newBlockDef = vorld.blockConfig ? vorld.blockConfig[newBlock] : null;
-		let newLight = newBlockDef && newBlockDef.light ? newBlockDef.light : 0; 
-		if ((!prevBlockDef || !prevBlockDef.light) 
-			&& newBlockDef && newLight == 0 && !newBlockDef.isOpaque) {
-			let attenuation = newBlockDef.attenuation || 1;
-			newLight = prevLightLevel - (attenuation - 1);
-			// Note - is overzealous for cases where prev attenuation > 1
-		}
-		if (prevLightLevel > 0 && prevLightLevel > newLight) {
-			removeLight(vorld, x, y, z, removalQueue, propagationQueue);
-		}
-
-		if (newBlockDef && newBlockDef.light) {
-			addLight(vorld, x, y, z, newBlockDef.light);
-		} else if (!newBlock || (newBlockDef && !newBlockDef.isOpaque)) {
-			buildAdjacentLightQueue(propagationQueue, vorld, x, y, z);
-			if (propagationQueue.length) {
-				propagateLight(vorld, propagationQueue);
-			}
-			buildAdjacentSunlightQueue(propagationQueue, vorld, x, y, z);
-			if (propagationQueue.length) {
-				propagateLight(vorld, propagationQueue, true);
-			}
-			// TODO: Handle empty adjacent chunks for sunlight
-			// requires going *up* to the top of the chunk and propagating down 
-			// if there's no adjacent chunk *and* maxY for that x/z is less than y
-			// (or is undefined)
-		}
-	};
-
-	let buildAdjacentLightQueue = function(queue, vorld, x, y, z) {
-		if (getBlockLight(vorld, x + 1, y, z)) {
-			queue.push(x + 1, y, z);
-		}
-		if (getBlockLight(vorld, x - 1, y, z)) {
-			queue.push(x - 1, y, z);
-		}
-		if (getBlockLight(vorld, x, y + 1, z)) {
-			queue.push(x, y + 1, z);
-		}
-		if (getBlockLight(vorld, x, y - 1, z)) {
-			queue.push(x, y - 1, z);
-		}
-		if (getBlockLight(vorld, x, y, z + 1)) {
-			queue.push(x, y, z + 1);
-		}
-		if (getBlockLight(vorld, x, y, z - 1)) {
-			queue.push(x, y, z - 1);
-		}
-	};
-
-	let buildAdjacentSunlightQueue = function(queue, vorld, x, y, z) {
-		if (getBlockSunlight(vorld, x + 1, y, z)) {
-			queue.push(x + 1, y, z);
-		}
-		if (getBlockSunlight(vorld, x - 1, y, z)) {
-			queue.push(x - 1, y, z);
-		}
-		if (getBlockSunlight(vorld, x, y + 1, z)) {
-			queue.push(x, y + 1, z);
-		}
-		if (getBlockSunlight(vorld, x, y - 1, z)) {
-			queue.push(x, y - 1, z);
-		}
-		if (getBlockSunlight(vorld, x, y, z + 1)) {
-			queue.push(x, y, z + 1);
-		}
-		if (getBlockSunlight(vorld, x, y, z - 1)) {
-			queue.push(x, y, z - 1);
-		}
-	};
-
-	let addLight = function(vorld, x, y, z, light) {
-		let queue = propagationQueue;
-		if (light > 0 && trySetLightForBlock(vorld, x, y, z, light)) {
-			queue.push(x, y, z);
-			propagateLight(vorld, queue)
-		}
-	};
-
-	let checkPositionForLightRemovalAndBackfill = function(vorld, adjacentLightLevel, pos, queue, backfillQueue) {
-		let lightLevel = getBlockLight(vorld, pos[0], pos[1], pos[2]);
-		if (lightLevel) {
-			let neighbourLight = getDefLightAtPos(vorld, pos);
-			if (lightLevel < adjacentLightLevel) {
-				queue.push(pos[0], pos[1], pos[2]);
-			}
-			if (lightLevel >= adjacentLightLevel || neighbourLight) {
-				backfillQueue.push(pos[0], pos[1], pos[2]);
-			}
-		}
-	};
-
-	let removeLight = function(vorld, x, y, z, queue, backfillQueue) {
-		queue.push(x, y, z);
-		while (queue.length) {
-			let pos = queue.pop();
-			let [ x, y, z ] = pos;
-			let light = getBlockLight(vorld, x, y, z);
-			
-			pos[0] += 1;
-			checkPositionForLightRemovalAndBackfill(vorld, light, pos, queue, backfillQueue);
-
-			pos[0] -= 2;
-			checkPositionForLightRemovalAndBackfill(vorld, light, pos, queue, backfillQueue);
-
-			pos[0] += 1;
-			pos[1] += 1;
-			checkPositionForLightRemovalAndBackfill(vorld, light, pos, queue, backfillQueue);
-
-			pos[1] -= 2;
-			checkPositionForLightRemovalAndBackfill(vorld, light, pos, queue, backfillQueue);
-
-			pos[1] += 1;
-			pos[2] += 1;
-			checkPositionForLightRemovalAndBackfill(vorld, light, pos, queue, backfillQueue);
-
-			pos[2] -= 2;
-			checkPositionForLightRemovalAndBackfill(vorld, light, pos, queue, backfillQueue);
-
-			pos[2] += 1;
-			removeLightForBlock(vorld, pos[0], pos[1], pos[2]);
-
-			let lightSource = getDefLightAtPos(vorld, pos);
-			if (lightSource) {
-				trySetLightForBlock(vorld, x, y, z, lightSource);
-			}
-		}
-		queue.reset();
-
-		if (backfillQueue.length > 0) {
-			propagateLight(vorld, backfillQueue);
-		}
-	};
-
-	let removeSunlight = function(vorld, x, y, z, queue, backfillQueue) {
-		queue.push(x, y, z);
-		while (queue.length) {
-			let pos = queue.pop();
-			let neighbourLight = 0;
-			let light = getBlockSunlight(vorld, pos[0], pos[1], pos[2]);
-			
-			neighbourLight = getBlockSunlight(vorld, pos[0] + 1, pos[1], pos[2]);
-			if (neighbourLight && neighbourLight < light) {
-				queue.push(pos[0] + 1, pos[1], pos[2]);
-			} else if (neighbourLight) {
-				backfillQueue.push(pos[0] + 1, pos[1], pos[2]);
-			}
-			neighbourLight = getBlockSunlight(vorld, pos[0] - 1, pos[1], pos[2]);
-			if (neighbourLight && neighbourLight < light) {
-				queue.push(pos[0] - 1, pos[1], pos[2]);
-			} else if (neighbourLight) {
-				backfillQueue.push(pos[0] - 1, pos[1], pos[2]);
-			}
-			neighbourLight = getBlockSunlight(vorld, pos[0], pos[1] + 1, pos[2]);
-			if (neighbourLight && neighbourLight < light) {
-				queue.push(pos[0], pos[1] + 1, pos[2]);
-			} else if (neighbourLight) {
-				backfillQueue.push(pos[0], pos[1] + 1, pos[2]);
-			}
-			neighbourLight = getBlockSunlight(vorld, pos[0], pos[1] - 1, pos[2]);
-			if (neighbourLight && (neighbourLight < light || (neighbourLight == light && light == 15))) {
-				queue.push(pos[0], pos[1] - 1, pos[2]);
-			} else if (neighbourLight) {
-				backfillQueue.push(pos[0], pos[1] - 1, pos[2]);
-			}
-			neighbourLight = getBlockSunlight(vorld, pos[0], pos[1], pos[2] + 1);
-			if (neighbourLight && neighbourLight < light) {
-				queue.push(pos[0], pos[1], pos[2] + 1);
-			} else if (neighbourLight) {
-				backfillQueue.push(pos[0], pos[1], pos[2] + 1);
-			}
-			neighbourLight = getBlockSunlight(vorld, pos[0], pos[1], pos[2] - 1);
-			if (neighbourLight && neighbourLight < light) {
-				queue.push(pos[0], pos[1], pos[2] - 1);
-			} else if (neighbourLight) {
-				backfillQueue.push(pos[0], pos[1], pos[2] - 1);
-			}
-
-			removeSunlightForBlock(vorld, pos[0], pos[1], pos[2]);
-		}
-		queue.reset();
-
-		if (backfillQueue.length > 0) {
-			propagateLight(vorld, backfillQueue, true);
-		}
-	};
-
-	let addSunlight = exports.addSunlight = function(vorld, x, y, z) {
-		trySetLightForBlock(vorld, x, y, z, 15, true);
-		let queue = propagationQueue;
-		queue.push(x, y, z);
-		propagateLight(vorld, queue, true);
-	};
-
-	let propagateLight = function(vorld, queue, isSunlight) {
-		// This is sunlight bool is kinda ugly, maybe we should just have two separate similar functions
-		// Potential optimisations
-		// * Check adjacency when filling sunlight horizontally, < 14 to prevent repeated fills into the space
-		// * Use heap instead of queue (prioritise blocks with highest sunlight to set)
-		//   the insert cost may outweigh the reduction in propogation
-		while (queue.length) {
-			let pos = queue.pop();
-			let attenuation = getBlockAttenuation(vorld, pos[0], pos[1], pos[2]);
-			let light = !isSunlight ? getBlockLight(vorld, pos[0], pos[1], pos[2]) : getBlockSunlight(vorld, pos[0], pos[1], pos[2]);
-			light -= attenuation;
-
-			// Sunlight doesn't attenuate as it goes down
-			let downLight = light;
-			if (isSunlight && attenuation == 1 && light + attenuation == 15) {
-				downLight = 15;
-			}
-
-			// TODO: Get directional opacity vector, values 0 or 1 - transform by rotation and each axis as appropriate before propogating light
-			// Consider - we could probably store propogation direction histories in our queue - and then simulate bounces better than just flood fill
-
-			// Note: Only pushes when new light for block is greater than old value
-			if (light > 0) { 
-				if (trySetLightForBlock(vorld, pos[0], pos[1] + 1, pos[2], light, isSunlight)) {
-					queue.push(pos[0], pos[1] + 1, pos[2]);
-				}
-				if (trySetLightForBlock(vorld, pos[0], pos[1] - 1, pos[2], downLight, isSunlight)) {
-					queue.push(pos[0], pos[1] - 1, pos[2]);
-				}
-				// For Sunlight - don't consider horizontally adjacent blocks which will be filled with sunlight
-				// at some point (although they may not have been yet) 
-				if ((!isSunlight || getHighestBlockY(vorld, pos[0] + 1, pos[2]) > pos[1])
-					&& trySetLightForBlock(vorld, pos[0] + 1, pos[1], pos[2], light, isSunlight)) {
-					queue.push(pos[0] + 1, pos[1], pos[2]);
-				}
-				if ((!isSunlight || getHighestBlockY(vorld, pos[0] - 1, pos[2]) > pos[1])
-					&& trySetLightForBlock(vorld, pos[0] - 1, pos[1], pos[2], light, isSunlight)) {
-					queue.push(pos[0] - 1, pos[1], pos[2]);
-				}
-				if ((!isSunlight || getHighestBlockY(vorld, pos[0], pos[2] + 1) > pos[1])
-					&& trySetLightForBlock(vorld, pos[0], pos[1], pos[2] + 1, light, isSunlight)) {
-					queue.push(pos[0], pos[1], pos[2] + 1);
-				}
-				if ((!isSunlight || getHighestBlockY(vorld, pos[0], pos[2] - 1) > pos[1])
-					&& trySetLightForBlock(vorld, pos[0], pos[1], pos[2] - 1, light, isSunlight)) {
-					queue.push(pos[0], pos[1], pos[2] - 1);
-				}
-			}
-		}
-		queue.reset();
-	};
-
-	let trySetLightForBlock = function(vorld, x, y, z, light, isSunlight) {
-		let [ chunkI, chunkJ, chunkK, blockI, blockJ, blockK ] = Utils.getIndices(vorld.chunkSize, x, y, z);
-
-		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
-		let currentLight = 0, blockDef = null;
-		if (!chunk) {
-			if (!isSunlight) {  // This is a problem for sunlight - we do sometimes need to create new chunks if we allow sparse chunks
-				chunk = Chunk.create({ size: vorld.chunkSize });
-				exports.addChunk(vorld, chunk, chunkI, chunkJ, chunkK);	
-			}
-		} else {
-			let block = Chunk.getBlock(chunk, blockI, blockJ, blockK);
-			if (block && vorld.blockConfig) {
-				blockDef = vorld.blockConfig[block]; 
-			}
-			currentLight = !isSunlight 
-				? Chunk.getBlockLight(chunk, blockI, blockJ, blockK)
-				: Chunk.getBlockSunlight(chunk, blockI, blockJ, blockK);
-		}
-		if (chunk) {
-			if ((!blockDef || !blockDef.isOpaque) && (!currentLight || light > currentLight)) {
-				// TODO: Pass through modifers rather than just !isOpaque
-				if (!isSunlight) {
-					Chunk.setBlockLight(chunk, blockI, blockJ, blockK, light);
-				} else {
-					Chunk.setBlockSunlight(chunk, blockI, blockJ, blockK, light);
-				}
-				return true;
-			}
-		}
-		return false;
-	};
-
-	let removeLightForBlock = function(vorld, x, y, z) {
-		let [ chunkI, chunkJ, chunkK, blockI, blockJ, blockK ] = Utils.getIndices(vorld.chunkSize, x, y, z);
-		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
-		if (chunk) {
-			Chunk.setBlockLight(chunk, blockI, blockJ, blockK, 0);
-		}
-	};
-
-	let removeSunlightForBlock = function(vorld, x, y, z) {
-		let [ chunkI, chunkJ, chunkK, blockI, blockJ, blockK ] = Utils.getIndices(vorld.chunkSize, x, y, z);
-		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
-		if (chunk) {
-			Chunk.setBlockSunlight(chunk, blockI, blockJ, blockK, 0);
-		}
-	};
-
 	// Heightmap
-	let getHighestBlockY = exports.getHighestBlockY = (vorld, x, z) => {
+	exports.getHighestBlockY = (vorld, x, z) => {
 		let chunkI = Math.floor(x / vorld.chunkSize),
 		chunkK = Math.floor(z / vorld.chunkSize);
 		let chunkKey = chunkI + "_" + chunkK;
@@ -645,7 +270,7 @@ module.exports = (function() {
 		for (let i = iMin; i <= iMax; i++) {
 			for (let k = kMin; k <= kMax; k++) {
 				for (let j = jMin; j <= jMax; j++) {
-					let key = getKey(i, j, k);
+					let key = Utils.getChunkKey(i, j, k);
 					if (vorld.chunks[key]) {
 						chunks[key] = vorld.chunks[key];
 					}

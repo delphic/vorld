@@ -11,10 +11,13 @@ module.exports = (function(){
 	// Core
 	exports.Cardinal = require('./cardinal');
 	exports.Chunk = require('./chunk');
+	exports.Lighting = require('./lighting');
 	exports.Maths = require('./maths');
 	exports.Physics = require('./physics');
 	exports.Primitives = require('./primitives');
 	exports.Shader = require('./shader');
+	exports.Updater = require('./updater');
+	exports.Utils = require('./utils');
 	exports.World = require('./world');
 
 	// Workers

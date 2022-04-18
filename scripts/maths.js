@@ -5,6 +5,7 @@ module.exports = (function(){
 
 	let approximately = exports.approximately = Maths.approximately;
 	
+	exports.lerp = Maths.lerp;
 	exports.invertQuat = Maths.quat.invert;
 	exports.transformVecByQuat = Maths.vec3.transformQuat;
 

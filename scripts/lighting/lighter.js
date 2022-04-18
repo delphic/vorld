@@ -1,4 +1,4 @@
-let Vorld = require('../world');
+const Lighting = require('../lighting');
 
 module.exports = (function(){
 	let exports = {};
@@ -26,7 +26,7 @@ module.exports = (function(){
 						y = heightMapEntry.maxChunkIndex * l + 15,
 						z = chunkK * l + k;
 
-					Vorld.addSunlight(vorld, x, y, z);
+					Lighting.addSunlight(vorld, x, y, z);
 				}
 			}
 
