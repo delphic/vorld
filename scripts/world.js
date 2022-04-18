@@ -10,12 +10,9 @@
 // entire chunk do not exceed the maximum number of vertices supported.
 
 let Chunk = require('./chunk');
-let Cardinal = require('./cardinal');
 
 module.exports = (function() {
 	let exports = {};
-
-	exports.Cardinal = Cardinal;
 
 	let getKey = function(i, j, k) {
 		return i + "_" + j + "_" + k;
