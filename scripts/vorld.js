@@ -15,7 +15,6 @@ module.exports = (function(){
 	exports.Physics = require('./physics');
 	exports.Primitives = require('./primitives');
 	exports.Shader = require('./shader');
-	exports.Utils = require('./utils');
 	exports.World = require('./world');
 
 	// Workers

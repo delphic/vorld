@@ -4,6 +4,59 @@ let Maths = require('./maths');
 module.exports = (function() {
 	let exports = {};
 
+	// By convention, it is expected you will deconstruct the result of this Util method
+	let adjustChunkIndicesResult = [];
+	exports.adjustChunkIndices = function(chunkSize, chunkI, chunkJ, chunkK, blockI, blockJ, blockK) {
+		// Assumes you won't go out by more than chunkSize
+		if (blockI >= chunkSize) {
+			blockI = blockI - chunkSize;
+			chunkI += 1;
+		} else if (blockI < 0) {
+			blockI = chunkSize + blockI;
+			chunkI -= 1;
+		}
+		if (blockJ >= chunkSize) {
+			blockJ = blockJ - chunkSize;
+			chunkJ += 1;
+		} else if (blockJ < 0) {
+			blockJ = chunkSize + blockJ;
+			chunkJ -= 1;
+		}
+		if (blockK >= chunkSize) {
+			blockK = blockK - chunkSize;
+			chunkK += 1;
+		} else if (blockK < 0) {
+			blockK = chunkSize + blockK;
+			chunkK -= 1;
+		}
+
+		adjustChunkIndicesResult[0] = chunkI;
+		adjustChunkIndicesResult[1] = chunkJ;
+		adjustChunkIndicesResult[2] = chunkK;
+		adjustChunkIndicesResult[3] = blockI;
+		adjustChunkIndicesResult[4] = blockJ;
+		adjustChunkIndicesResult[5] = blockK;
+
+		return adjustChunkIndicesResult;
+	};
+
+	// By convention, it is expected you will deconstruct the result of this Util method
+	let getIndicesResult = [];
+	exports.getIndices = function(size, x, y, z) {
+		let chunkI = Math.floor(x / size),
+			chunkJ = Math.floor(y / size),
+			chunkK = Math.floor(z / size);
+		let blockI = x - (chunkI * size),
+			blockJ = y - (chunkJ * size),
+			blockK = z - (chunkK * size);
+		getIndicesResult[0] = chunkI;
+		getIndicesResult[1] = chunkJ;
+		getIndicesResult[2] = chunkK;
+		getIndicesResult[3] = blockI;
+		getIndicesResult[4] = blockJ;
+		getIndicesResult[5] = blockK;
+	};
+
 	exports.transformPointToVorldSpace = (vector, rotation, x, y, z) => {
 		if (rotation) {
 			Maths.offsetVector(vector, -0.5, -0.5, -0.5);

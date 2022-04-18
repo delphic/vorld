@@ -10,6 +10,7 @@
 // entire chunk do not exceed the maximum number of vertices supported.
 
 let Chunk = require('./chunk');
+let Utils = require('./utils');
 
 module.exports = (function() {
 	let exports = {};
@@ -30,17 +31,11 @@ module.exports = (function() {
 	};
 
 	exports.addBlock = function(vorld, x, y, z, block, up, forward) {
-		let size = vorld.chunkSize;
-		let chunkI = Math.floor(x / size),
-			chunkJ = Math.floor(y / size),
-			chunkK = Math.floor(z / size);
-		let blockI = x - (chunkI * size),
-			blockJ = y - (chunkJ * size),
-			blockK = z - (chunkK * size);
-		
+		let [ chunkI, chunkJ, chunkK, blockI, blockJ, blockK ] = Utils.getIndices(vorld.chunkSize, x, y, z);
+
 		let previousBlock = exports.getBlockByIndex(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK);
 		let previousYMax = getHighestBlockY(vorld, x, z);
-		exports.setBlockByIndex(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK, block, up, forward);
+		setBlockByIndex(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK, block, up, forward);
 		// Update Sunlight
 		if (block) {
 			removeSunlight(vorld, x, y, z, removalQueue, propagationQueue);
@@ -51,40 +46,12 @@ module.exports = (function() {
 	};
 
 	exports.getBlock = function(vorld, x, y, z) {
-		let size = vorld.chunkSize;
-		let chunkI = Math.floor(x / size),
-			chunkJ = Math.floor(y / size),
-			chunkK = Math.floor(z / size);
-		let blockI = x - (chunkI * size),
-			blockJ = y - (chunkJ * size),
-			blockK = z - (chunkK * size);
-		return exports.getBlockByIndex(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK);
+		let [ chunkI, chunkJ, chunkK, blockI, blockJ, blockK ] = Utils.getIndices(vorld.chunkSize, x, y, z);
+		return getBlockByIndex(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK);
 	};
 
-	exports.getBlockByIndex = function(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK) {
-		// Assumes you won't go out by more than chunkSize
-		if (blockI >= vorld.chunkSize) {
-			blockI = blockI - vorld.chunkSize;
-			chunkI += 1;
-		} else if (blockI < 0) {
-			blockI = vorld.chunkSize + blockI;
-			chunkI -= 1;
-		}
-		if (blockJ >= vorld.chunkSize) {
-			blockJ = blockJ - vorld.chunkSize;
-			chunkJ += 1;
-		} else if (blockJ < 0) {
-			blockJ = vorld.chunkSize + blockJ;
-			chunkJ -= 1;
-		}
-		if (blockK >= vorld.chunkSize) {
-			blockK = blockK - vorld.chunkSize;
-			chunkK += 1;
-		} else if (blockK < 0) {
-			blockK = vorld.chunkSize + blockK;
-			chunkK -= 1;
-		}
-
+	// Assumes indices are valid
+	let getBlockByIndex = function(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK) {
 		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
 		if (chunk) {
 			return Chunk.getBlock(chunk, blockI, blockJ, blockK);
@@ -92,14 +59,13 @@ module.exports = (function() {
 		return null;
 	};
 
+	exports.getBlockByIndex = function(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK) {
+		[ chunkI, chunkK, chunkK, blockI, blockJ, blockK ] = Utils.adjustChunkIndices(vorld.chunkSize, chunkI, chunkJ, chunkK, blockI, blockJ, blockK);
+		getBlockByIndex(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK);
+	};
+
 	exports.getBlockUp = function(vorld, x, y, z) {
-		let size = vorld.chunkSize;
-		let chunkI = Math.floor(x / size),
-			chunkJ = Math.floor(y / size),
-			chunkK = Math.floor(z / size);
-		let blockI = x - (chunkI * size),
-			blockJ = y - (chunkJ * size),
-			blockK = z - (chunkK * size);
+		let [ chunkI, chunkJ, chunkK, blockI, blockJ, blockK ] = Utils.getIndices(vorld.chunkSize, x, y, z);
 		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
 		if (chunk) {
 			return Chunk.getBlockUp(chunk, blockI, blockJ, blockK);
@@ -108,13 +74,7 @@ module.exports = (function() {
 	};
 
 	exports.getBlockForward = function(vorld, x, y, z) {
-		let size = vorld.chunkSize;
-		let chunkI = Math.floor(x / size),
-			chunkJ = Math.floor(y / size),
-			chunkK = Math.floor(z / size);
-		let blockI = x - (chunkI * size),
-			blockJ = y - (chunkJ * size),
-			blockK = z - (chunkK * size);
+		let [ chunkI, chunkJ, chunkK, blockI, blockJ, blockK ] = Utils.getIndices(vorld.chunkSize, x, y, z);
 		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
 		if (chunk) {
 			return Chunk.getBlockForward(chunk, blockI, blockJ, blockK);
@@ -123,13 +83,7 @@ module.exports = (function() {
 	};
 
 	exports.getBlockRotation = function(vorld, x, y, z) {
-		let size = vorld.chunkSize;
-		let chunkI = Math.floor(x / size),
-			chunkJ = Math.floor(y / size),
-			chunkK = Math.floor(z / size);
-		let blockI = x - (chunkI * size),
-			blockJ = y - (chunkJ * size),
-			blockK = z - (chunkK * size);
+		let [ chunkI, chunkJ, chunkK, blockI, blockJ, blockK ] = Utils.getIndices(vorld.chunkSize, x, y, z);
 		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
 		if (chunk) {
 			return Chunk.getBlockRotation(chunk, blockI, blockJ, blockK);
@@ -137,30 +91,8 @@ module.exports = (function() {
 		return null;
 	}
 
-	exports.setBlockByIndex = function(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK, block, up, forward) {
-		// Assumes you won't go out by more than chunkSize
-		if (blockI >= vorld.chunkSize) {
-			blockI = blockI - vorld.chunkSize;
-			chunkI += 1;
-		} else if (blockI < 0) {
-			blockI = vorld.chunkSize + blockI;
-			chunkI -= 1;
-		}
-		if (blockJ >= vorld.chunkSize) {
-			blockJ = blockJ - vorld.chunkSize;
-			chunkJ += 1;
-		} else if (blockJ < 0) {
-			blockJ = vorld.chunkSize + blockJ;
-			chunkJ -= 1;
-		}
-		if (blockK >= vorld.chunkSize) {
-			blockK = blockK - vorld.chunkSize;
-			chunkK += 1;
-		} else if (blockK < 0) {
-			blockK = vorld.chunkSize + blockK;
-			chunkK -= 1;
-		}
-
+	// Assumes valid indicies
+	let setBlockByIndex = function(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK, block, up, forward) {
 		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
 		if (!chunk) {
 			chunk = Chunk.create({ size: vorld.chunkSize });
@@ -171,6 +103,11 @@ module.exports = (function() {
 		Chunk.addBlock(chunk, blockI, blockJ, blockK, block, up, forward);
 		// However we do set heightmap (which is then used for sky light)
 		updateHeightMap(vorld, chunkI, chunkJ, chunkK, blockI, blockJ, blockK, block);
+	};
+
+	exports.setBlockByIndex = function(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK, block, up, forward) {
+		[ chunkI, chunkK, chunkK, blockI, blockJ, blockK ] = Utils.adjustChunkIndices(vorld.chunkSize, chunkI, chunkJ, chunkK, blockI, blockJ, blockK);
+		setBlockByIndex(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK, block, up, forward);
 	};
 
 	exports.isBlockSolid = function(vorld, x, y, z) {
@@ -221,13 +158,7 @@ module.exports = (function() {
 
 	// Lighting
 	let getBlockLight = exports.getBlockLight = function(vorld, x, y, z) {
-		let size = vorld.chunkSize;
-		let chunkI = Math.floor(x / size),
-			chunkJ = Math.floor(y / size),
-			chunkK = Math.floor(z / size);
-		let blockI = x - (chunkI * size),
-			blockJ = y - (chunkJ * size),
-			blockK = z - (chunkK * size);
+		let [ chunkI, chunkJ, chunkK, blockI, blockJ, blockK ] = Utils.getIndices(vorld.chunkSize, x, y, z);
 		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
 		if (chunk) {
 			return Chunk.getBlockLight(chunk, blockI, blockJ, blockK);
@@ -236,13 +167,7 @@ module.exports = (function() {
 	};
 
 	let getBlockSunlight = exports.getBlockSunlight = function(vorld, x, y, z) {
-		let size = vorld.chunkSize;
-		let chunkI = Math.floor(x / size),
-			chunkJ = Math.floor(y / size),
-			chunkK = Math.floor(z / size);
-		let blockI = x - (chunkI * size),
-			blockJ = y - (chunkJ * size),
-			blockK = z - (chunkK * size);
+		let [ chunkI, chunkJ, chunkK, blockI, blockJ, blockK ] = Utils.getIndices(vorld.chunkSize, x, y, z);
 		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
 		if (chunk) {
 			return Chunk.getBlockSunlight(chunk, blockI, blockJ, blockK);
@@ -270,27 +195,8 @@ module.exports = (function() {
 	};
 
 	exports.getBlockLightByIndex = function(vorld, chunkI, chunkJ, chunkK, blockI, blockJ, blockK) {
-		if (blockI >= vorld.chunkSize) {
-			blockI = blockI - vorld.chunkSize;
-			chunkI += 1;
-		} else if (blockI < 0) {
-			blockI = vorld.chunkSize + blockI;
-			chunkI -= 1;
-		}
-		if (blockJ >= vorld.chunkSize) {
-			blockJ = blockJ - vorld.chunkSize;
-			chunkJ += 1;
-		} else if (blockJ < 0) {
-			blockJ = vorld.chunkSize + blockJ;
-			chunkJ -= 1;
-		}
-		if (blockK >= vorld.chunkSize) {
-			blockK = blockK - vorld.chunkSize;
-			chunkK += 1;
-		} else if (blockK < 0) {
-			blockK = vorld.chunkSize + blockK;
-			chunkK -= 1;
-		}
+		[ chunkI, chunkK, chunkK, blockI, blockJ, blockK ] = Utils.adjustChunkIndices(vorld.chunkSize, chunkI, chunkJ, chunkK, blockI, blockJ, blockK);
+
 		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
 		if (chunk) {
 			return Chunk.getBlockLight(chunk, blockI, blockJ, blockK);
@@ -299,28 +205,8 @@ module.exports = (function() {
 	};
 
 	exports.getBlockSunlightByIndex = function(vorld, chunkI, chunkJ, chunkK, blockI, blockJ, blockK) {
-		if (blockI >= vorld.chunkSize) {
-			blockI = blockI - vorld.chunkSize;
-			chunkI += 1;
-		} else if (blockI < 0) {
-			blockI = vorld.chunkSize + blockI;
-			chunkI -= 1;
-		}
-		if (blockJ >= vorld.chunkSize) {
-			blockJ = blockJ - vorld.chunkSize;
-			chunkJ += 1;
-		} else if (blockJ < 0) {
-			blockJ = vorld.chunkSize + blockJ;
-			chunkJ -= 1;
-		}
-		if (blockK >= vorld.chunkSize) {
-			blockK = blockK - vorld.chunkSize;
-			chunkK += 1;
-		} else if (blockK < 0) {
-			blockK = vorld.chunkSize + blockK;
-			chunkK -= 1;
-		}
-		// TODO: Refactor into helper that does ^^ this as we do it in a lot of places, will require an out obj, but we can 'static' cache that
+		[ chunkI, chunkK, chunkK, blockI, blockJ, blockK ] = Utils.adjustChunkIndices(vorld.chunkSize, chunkI, chunkJ, chunkK, blockI, blockJ, blockK);
+
 		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
 		if (chunk) {
 			return Chunk.getBlockSunlight(chunk, blockI, blockJ, blockK);
@@ -583,13 +469,7 @@ module.exports = (function() {
 	};
 
 	let trySetLightForBlock = function(vorld, x, y, z, light, isSunlight) {
-		let size = vorld.chunkSize;
-		let chunkI = Math.floor(x / size),
-			chunkJ = Math.floor(y / size),
-			chunkK = Math.floor(z / size);
-		let blockI = x - (chunkI * size),
-			blockJ = y - (chunkJ * size),
-			blockK = z - (chunkK * size);
+		let [ chunkI, chunkJ, chunkK, blockI, blockJ, blockK ] = Utils.getIndices(vorld.chunkSize, x, y, z);
 
 		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
 		let currentLight = 0, blockDef = null;
@@ -622,14 +502,7 @@ module.exports = (function() {
 	};
 
 	let removeLightForBlock = function(vorld, x, y, z) {
-		let size = vorld.chunkSize;
-		let chunkI = Math.floor(x / size),
-			chunkJ = Math.floor(y / size),
-			chunkK = Math.floor(z / size);
-		let blockI = x - (chunkI * size),
-			blockJ = y - (chunkJ * size),
-			blockK = z - (chunkK * size);
-			
+		let [ chunkI, chunkJ, chunkK, blockI, blockJ, blockK ] = Utils.getIndices(vorld.chunkSize, x, y, z);
 		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
 		if (chunk) {
 			Chunk.setBlockLight(chunk, blockI, blockJ, blockK, 0);
@@ -637,14 +510,7 @@ module.exports = (function() {
 	};
 
 	let removeSunlightForBlock = function(vorld, x, y, z) {
-		let size = vorld.chunkSize;
-		let chunkI = Math.floor(x / size),
-			chunkJ = Math.floor(y / size),
-			chunkK = Math.floor(z / size);
-		let blockI = x - (chunkI * size),
-			blockJ = y - (chunkJ * size),
-			blockK = z - (chunkK * size);
-			
+		let [ chunkI, chunkJ, chunkK, blockI, blockJ, blockK ] = Utils.getIndices(vorld.chunkSize, x, y, z);
 		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
 		if (chunk) {
 			Chunk.setBlockSunlight(chunk, blockI, blockJ, blockK, 0);
