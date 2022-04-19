@@ -393,7 +393,7 @@ module.exports = (function(){
 
 	exports.createMesh = function(vorld, chunk, atlas, alphaBlockToMesh, meshCutout, meshUnlit) {
 		// Vorld can be whole set of data or a slice, however adjacent chunks
-		// should be provide to avoid unnecessary internal faces.
+		// should be provided in vorld to avoid unnecessary internal faces.
 		if (!chunk) {
 			return null;
 		}

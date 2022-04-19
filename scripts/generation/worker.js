@@ -1,4 +1,4 @@
-// Sample Generator Worker
+// Sample Terrian Generator Worker
 
 // Creates vorld data for a vorld slice
 // Using multiple octaves of perlin noise
@@ -6,10 +6,12 @@
 // Posts progress message after each chunk generated
 // Returns generated vorld data with complete message when finished
 
-let TerrainGenerator = require('./terrain');
-let ShapingFunctions = require('./shapingFunctions');
+const TerrainGenerator = require('./terrain');
+const ShapingFunctions = require('./shapingFunctions');
 
-onmessage = function(e) {
+module.exports = (function(){
+	let exports = {};
+
 	// Example Post Data
 	/*{
 		generationRules: {
@@ -37,80 +39,84 @@ onmessage = function(e) {
 			kMin: -6, kMax: 6
 		}
 	}*/
-	let generationRules = e.data.generationRules;
-	let shapingFunction = generationRules.shapingFunction;
-	let bounds = e.data.bounds;
-
-	let blockDelegate = (value) => {
-		for (let i = 0, l = generationRules.thresholds.length; i < l; i++) {
-			if (value < generationRules.thresholds[i]) {
-				return generationRules.blocksByThreshold[i];
-			}
-		}
-		return generationRules.blocksByThreshold[generationRules.thresholds.length];
-	};
-
-	let verticalTransformationDelegate = (block, blockAbove, y) => {
-		let vts = generationRules.verticalTransforms;
-		for (let i = 0, l = vts.length; i < l; i++) {
-			let vt = vts[i]; 
-			
-			let conditions = vt.conditions;
-			let pass = !!conditions.length;
-			for (let ci = 0, n = conditions.length; ci < n; ci++) {
-				switch (conditions[ci]) {
-					case "blockValue":
-						pass = pass && block == vt.block; 
-						break;
-					case "blockAboveValue":
-						pass = pass && blockAbove == vt.blockAbove;
-						break;
-					case "yMax": 
-						pass = pass && y <= vt.yMax;
-						break;
-					case "yMin":
-						pass = pass && y >= vt.yMin;
-						break;
-					case "yRange":
-						pass = pass && y >= vt.yMin && y <= vt.yMax;
-						break;
-					default:
-						console.error("Unsupported vertical transform condition " + conditions[ci]);
-						pass = false;
-						break;
-				}
-				if (!pass) {
-					break;
+	exports.execute = function(data, postMessage) {
+		let generationRules = data.generationRules;
+		let shapingFunction = generationRules.shapingFunction;
+		let bounds = data.bounds;
+	
+		let blockDelegate = (value) => {
+			for (let i = 0, l = generationRules.thresholds.length; i < l; i++) {
+				if (value < generationRules.thresholds[i]) {
+					return generationRules.blocksByThreshold[i];
 				}
 			}
-
-			if (pass) {
-				block = vt.targetBlock;
+			return generationRules.blocksByThreshold[generationRules.thresholds.length];
+		};
+	
+		let verticalTransformationDelegate = (block, blockAbove, y) => {
+			let vts = generationRules.verticalTransforms;
+			for (let i = 0, l = vts.length; i < l; i++) {
+				let vt = vts[i]; 
+				
+				let conditions = vt.conditions;
+				let pass = !!conditions.length;
+				for (let ci = 0, n = conditions.length; ci < n; ci++) {
+					switch (conditions[ci]) {
+						case "blockValue":
+							pass = pass && block == vt.block; 
+							break;
+						case "blockAboveValue":
+							pass = pass && blockAbove == vt.blockAbove;
+							break;
+						case "yMax": 
+							pass = pass && y <= vt.yMax;
+							break;
+						case "yMin":
+							pass = pass && y >= vt.yMin;
+							break;
+						case "yRange":
+							pass = pass && y >= vt.yMin && y <= vt.yMax;
+							break;
+						default:
+							console.error("Unsupported vertical transform condition " + conditions[ci]);
+							pass = false;
+							break;
+					}
+					if (!pass) {
+						break;
+					}
+				}
+	
+				if (pass) {
+					block = vt.targetBlock;
+				}
 			}
-		}
-		return block;
+			return block;
+		};
+	
+		let generator = TerrainGenerator.create({
+			seed: generationRules.seed,
+			baseWavelength: generationRules.baseWavelength,
+			weightings: generationRules.octaveWeightings,
+			noiseOffset: generationRules.neutralNoise ? 0 : 0.5,
+			minimumBlockThreshold: generationRules.thresholds[0],
+			shapingFunction: ShapingFunctions.create(shapingFunction),
+			blockDelegate: blockDelegate,
+			verticalTransformationDelegate: verticalTransformationDelegate
+		});
+	
+		let count = 0,
+			total = (bounds.iMax - bounds.iMin + 1) *
+				(bounds.jMax - bounds.jMin + 1) *
+				(bounds.kMax - bounds.kMin + 1);
+	
+		let vorld = generator.generate(bounds, () => { 
+			count++;
+			postMessage({ progress: count / total });
+		});
+	
+		postMessage({ complete: true, vorld: vorld });
 	};
 
-	let generator = TerrainGenerator.create({
-		seed: generationRules.seed,
-		baseWavelength: generationRules.baseWavelength,
-		weightings: generationRules.octaveWeightings,
-		noiseOffset: generationRules.neutralNoise ? 0 : 0.5,
-		minimumBlockThreshold: generationRules.thresholds[0],
-		shapingFunction: ShapingFunctions.create(shapingFunction),
-		blockDelegate: blockDelegate,
-		verticalTransformationDelegate: verticalTransformationDelegate
-	});
-
-	let count = 0,
-		total = (bounds.iMax - bounds.iMin + 1) *
-			(bounds.jMax - bounds.jMin + 1) *
-			(bounds.kMax - bounds.kMin + 1);
-
-	let vorld = generator.generate(bounds, () => { 
-		count++;
-		this.postMessage({ progress: count / total });
-	});
-
-	this.postMessage({ complete: true, vorld: vorld });
-};
+	return exports;
+})();

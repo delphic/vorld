@@ -22,7 +22,7 @@ module.exports = (function(){
 	exports.World = require('./world');
 
 	// Workers
-	// TODO: Combine into single extensible worker
+	// Question: how many of these are used externally? (Flora is but not sure the others are)
 	exports.Generator = {
 		Flora: require('./generation/flora'),
 		ShapingFunctions: require('./generation/shapingFunctions'),
