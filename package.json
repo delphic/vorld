@@ -1,7 +1,7 @@
 {
 	"name": "vorld",
-	"version": "0.3.0",
-	"description": "helpers for generating voxel works",
+	"version": "0.4.0",
+	"description": "Helpers for generating voxel worlds",
 	"author": "delphic",
 	"license": "MIT",
 	"homepage": "https://github.com/delphic/vorld/",

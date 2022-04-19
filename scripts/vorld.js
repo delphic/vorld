@@ -9,6 +9,7 @@ module.exports = (function(){
 	};
 
 	// Core
+	exports.BlockConfig = require('./blockConfig');
 	exports.Cardinal = require('./cardinal');
 	exports.Chunk = require('./chunk');
 	exports.Lighting = require('./lighting');

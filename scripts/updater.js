@@ -6,7 +6,7 @@ const World = require('./world');
 module.exports = (function(){
 	let exports = {};
 	
-	// TODO: Review use of this in generators - arguably generators should simply setBlocks and light be light propogation afterwards
+	// TODO: Review use of this in generators - arguably generators should simply setBlocks and light should be propogated afterwards
 	exports.addBlock = function(vorld, x, y, z, block, up, forward) {
 		let previousBlock = World.getBlock(vorld, x, y, z);
 		let previousYMax = World.getHighestBlockY(vorld, x, z);
@@ -23,6 +23,7 @@ module.exports = (function(){
 		}
 		// Update lighting
 		Lighting.updateLightForBlock(vorld, x, y, z, previousBlock, block);
+		// Q: I think this propogates lighting changes for sunlight as well, could this be doubling up with addSunlight above?
 	};
 
 	return exports;

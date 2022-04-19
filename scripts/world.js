@@ -9,6 +9,7 @@
 // Default chunk size defined as 16 so that meshes generated for an 
 // entire chunk do not exceed the maximum number of vertices supported.
 
+const BlockConfig = require('./blockConfig');
 const Chunk = require('./chunk');
 const Utils = require('./utils');
 
@@ -96,50 +97,15 @@ module.exports = (function() {
 		setBlockByIndex(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK, block, up, forward);
 	};
 
+	// Definition Property Helpers
 	exports.isBlockSolid = function(vorld, x, y, z) {
 		let block = exports.getBlock(vorld, x, y, z);
-		return block && exports.isBlockTypeSolid(vorld, block);
+		return block && BlockConfig.isBlockTypeSolid(vorld, block);
 	};
 
 	exports.isBlockOpaque = function(vorld, x, y, z) {
 		let block = exports.getBlock(vorld, x, y, z);
-		return block && exports.isBlockTypeOpaque(vorld, block);
-	};
-
-	// Block Config methods (arguably should move to BlockConfig module)
-	exports.getBlockTypeDefinition = function(vorld, block) {
-		if (vorld.blockConfig && vorld.blockConfig[block]) {
-			return vorld.blockConfig[block];
-		}
-		return null;
-	};
-
-	exports.isBlockTypeSolid = function(vorld, block) {
-		if (vorld.blockConfig && vorld.blockConfig[block]) {
-			return vorld.blockConfig[block].isSolid;
-		}
-		return !!block;
-	};
-
-	exports.isBlockTypeOpaque = function(vorld, block) {
-		if (vorld.blockConfig && vorld.blockConfig[block]) {
-			return vorld.blockConfig[block].isOpaque;
-		}
-		return !!block;
-	};
-
-	exports.isBlockTypeAlpha = function(vorld, block) {
-		if (vorld.blockConfig && vorld.blockConfig[block]) {
-			return vorld.blockConfig[block].useAlpha;
-		}
-		return !!block;
-	};
-
-	exports.getBlockTypeMesh = function(vorld, block) {
-		if (vorld.blockConfig && vorld.blockConfig[block]) {
-			return vorld.blockConfig[block].mesh;
-		}
-		return null;
+		return block && BlockConfig.isBlockTypeOpaque(vorld, block);
 	};
 
 	// Heightmap
@@ -308,7 +274,7 @@ module.exports = (function() {
 		}
 		if (parameters && parameters.blockConfig) {
 			vorld.blockConfig = parameters.blockConfig;
-			// Expect array indexed on block type with { isOpaque: bool, isSolid: bool }
+			// Except Array representing Block Config - see ./blockConfig.js
 		}
 		vorld.chunks = {};
 		if (parameters && parameters.chunks) {

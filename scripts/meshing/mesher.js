@@ -10,14 +10,15 @@
 // Uses texture coordinates and an atlas to allow for multiple voxel types in  a single texture.
 // Has option of outputing texture coordinates as a tile lookup rather than uv mapping.
 
-let Vorld = require('../world');
-let Chunk = require('../chunk');
-let Maths = require('../maths');
-let Cardinal = require('../cardinal');
-let Lighting = require('../lighting');
-let Primitives = require('../primitives');
-let Utils = require('../utils');
-let Direction = Cardinal.Direction;
+const Vorld = require('../world');
+const BlockConfig = require('../blockConfig');
+const Chunk = require('../chunk');
+const Maths = require('../maths');
+const Cardinal = require('../cardinal');
+const Lighting = require('../lighting');
+const Primitives = require('../primitives');
+const Utils = require('../utils');
+const Direction = Cardinal.Direction;
 
 module.exports = (function(){
 	let exports = {};
@@ -181,7 +182,7 @@ module.exports = (function(){
 
 		let localDirection = Cardinal.reverseTransformDirection(direction, rotation);
 
-		let blockDef = Vorld.getBlockTypeDefinition(vorld, block);
+		let blockDef = BlockConfig.getBlockTypeDefinition(vorld, block);
 		tile = getTileIndexFromAtlas(atlas, block, localDirection);
 
 		offset = localDirection * 12;
@@ -268,7 +269,7 @@ module.exports = (function(){
 		let n = mesh.vertices.length / 3;
 		let vertices = [], normals = [], tileIndices = [], indices = [];
 
-		let blockDef = Vorld.getBlockTypeDefinition(vorld, block);
+		let blockDef = BlockConfig.getBlockTypeDefinition(vorld, block);
 		let lightBake = [];
 
 		let vertex = [], normal = [];
@@ -421,10 +422,10 @@ module.exports = (function(){
 			if (!block) { return; }
 			if (alphaBlockToMesh && block != alphaBlockToMesh) { return; }
 
-			let blockDefinition = Vorld.getBlockTypeDefinition(vorld, block);
+			let blockDefinition = BlockConfig.getBlockTypeDefinition(vorld, block);
 			let meshInternals = !!blockDefinition.meshInternals;
-			let isBlockOpaque = Vorld.isBlockTypeOpaque(vorld, block);
-			let isBlockAlpha = Vorld.isBlockTypeAlpha(vorld, block);
+			let isBlockOpaque = BlockConfig.isBlockTypeOpaque(vorld, block);
+			let isBlockAlpha = BlockConfig.isBlockTypeAlpha(vorld, block);
 			let isBlockCutout = blockDefinition.useCutout;
 			let isBlockUnlit = blockDefinition.useUnlit;
 
@@ -434,7 +435,7 @@ module.exports = (function(){
 			if (!alphaBlockToMesh && isBlockAlpha) { return; } // alpha blocks get their own mesh
 
 			// Custom mesh, just put it in!
-			let customMesh = Vorld.getBlockTypeMesh(vorld, block);
+			let customMesh = BlockConfig.getBlockTypeMesh(vorld, block);
 			if (customMesh) {
 				addCustomBlockMeshToMesh(mesh, customMesh, vorld, atlas, block, rotation, i, j, k, chunkI, chunkJ, chunkK);
 				return;
@@ -443,7 +444,7 @@ module.exports = (function(){
 			// For Each Direction : Is Edge? Add quad to mesh!
 			let adjacentBlock = null;
 			let shouldAddQuad = (adjacentBlock) => {
-				let isAdjacentBlockOpaque = Vorld.isBlockTypeOpaque(vorld, adjacentBlock);
+				let isAdjacentBlockOpaque = BlockConfig.isBlockTypeOpaque(vorld, adjacentBlock);
 				return !adjacentBlock 
 					|| (isBlockOpaque && !isAdjacentBlockOpaque)
 					|| (!isBlockOpaque && !isAdjacentBlockOpaque && (block != adjacentBlock || meshInternals));

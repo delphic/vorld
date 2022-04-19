@@ -1,7 +1,8 @@
 // Vorld Physics
 const { Maths, Mesh } = require('fury');
-let Vorld = require('./world');
-let Utils = require('./utils');
+const BlockConfig = require('./blockConfig');
+const Utils = require('./utils');
+const Vorld = require('./world');
 
 module.exports = (function(){
 	let exports = {};
@@ -36,7 +37,7 @@ module.exports = (function(){
 		// Based block definition and rotation + position, append as many AABB's as relevant
 		let block = Vorld.getBlock(vorld, x, y, z);
 		if (block) {
-			let def = Vorld.getBlockTypeDefinition(vorld, block);
+			let def = BlockConfig.getBlockTypeDefinition(vorld, block);
 			if (!def || !def.isSolid) {
 				return;
 			}
@@ -132,7 +133,7 @@ module.exports = (function(){
 			
 			// Check for collision
 			let block = Vorld.getBlock(vorld, voxel[0], voxel[1], voxel[2]);
-			if (block && Vorld.isBlockTypeSolid(vorld, block)) { // TODO: Might want to replace with layers rather than isSolid
+			if (block && BlockConfig.isBlockTypeSolid(vorld, block)) { // TODO: Might want to replace with layers rather than isSolid
 				// Might be interesting to check that origin + s * direction = hitPoint (float precision)
 				return s;
 			} else if (block === null) {

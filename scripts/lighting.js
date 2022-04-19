@@ -1,3 +1,4 @@
+const BlockConfig = require('./blockConfig');
 const Chunk = require('./chunk');
 const World = require('./world');
 const Maths = require('./maths');
@@ -10,29 +11,27 @@ module.exports = (function(){
 	let propagationQueue = VectorQueue.create();
 	let removalQueue = VectorQueue.create();
 
-	// Lighting
-	// Arguably - this is block config module
+	// Definition Property Helpers
 	let getBlockAttenuation = function(vorld, x, y, z) {
 		let block = World.getBlock(vorld, x, y, z);
-		let def = World.getBlockTypeDefinition(vorld, block);
+		let def = BlockConfig.getBlockTypeDefinition(vorld, block);
 		if (def && def.attenuation) {
 			return def.attenuation;
 		}
 		return 1;
 	}
 
-	// Arguably - this is block config module
 	// There is some naming confusion around 'light' for light level and 'light' for block def emission
-	let getDefLightAtPos = function(vorld, pos) {
+	let getBlockTypeLight = function(vorld, pos) {
 		let block = World.getBlock(vorld, pos[0], pos[1], pos[2]);
-		let def = World.getBlockTypeDefinition(vorld, block);
+		let def = BlockConfig.getBlockTypeDefinition(vorld, block);
 		if (def && def.light) {
 			return def.light;
 		}
 		return 0;
 	};
 
-
+	// Lighting Methods
 	let getBlockLight = exports.getBlockLight = function(vorld, x, y, z) {
 		let [ chunkI, chunkJ, chunkK, blockI, blockJ, blockK ] = Utils.getIndices(vorld.chunkSize, x, y, z);
 		let chunk = World.getChunk(vorld, chunkI, chunkJ, chunkK);
@@ -157,7 +156,7 @@ module.exports = (function(){
 	let checkPositionForLightRemovalAndBackfill = function(vorld, adjacentLightLevel, pos, queue, backfillQueue) {
 		let lightLevel = getBlockLight(vorld, pos[0], pos[1], pos[2]);
 		if (lightLevel) {
-			let neighbourLight = getDefLightAtPos(vorld, pos);
+			let neighbourLight = getBlockTypeLight(vorld, pos);
 			if (lightLevel < adjacentLightLevel) {
 				queue.push(pos[0], pos[1], pos[2]);
 			}
@@ -197,7 +196,7 @@ module.exports = (function(){
 			pos[2] += 1;
 			removeLightForBlock(vorld, pos[0], pos[1], pos[2]);
 
-			let lightSource = getDefLightAtPos(vorld, pos);
+			let lightSource = getBlockTypeLight(vorld, pos);
 			if (lightSource) {
 				trySetLightForBlock(vorld, x, y, z, lightSource);
 			}
@@ -374,7 +373,8 @@ module.exports = (function(){
 		}
 	};
 
-	exports.getLightAtPos = (vorld, pos) => {
+	// Light Probes
+	exports.interpolateLight = (vorld, pos) => {
 		let x0 = Math.floor(pos[0] - 0.5),
 			y0 = Math.floor(pos[1] - 0.5),
 			z0 = Math.floor(pos[2] - 0.5);
@@ -382,7 +382,7 @@ module.exports = (function(){
 
 		// This can probe into blocks where the light level is zero (just probe close to the ground for an example)
 		// we actually want the surface light level of that block from this direction, rather than the light value itself
-		// This is true for getSunlightAtPos too - however this is a reasonable first pass
+		// This is true for interpolageSunlight too - however this is a reasonable first pass
 		return interpolatePoints(
 			getBlockLight(vorld, x0, y0, z0),
 			getBlockLight(vorld, x1, y0, z0),
@@ -395,7 +395,7 @@ module.exports = (function(){
 			pos);
 	};
 
-	exports.getSunlightAtPos = (vorld, pos) => {
+	exports.interpolateSunlight = (vorld, pos) => {
 		let x0 = Math.floor(pos[0] - 0.5),
 			y0 = Math.floor(pos[1] - 0.5),
 			z0 = Math.floor(pos[2] - 0.5);
