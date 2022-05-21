@@ -35,9 +35,10 @@ module.exports = (function(){
 	
 	// delegate should be a function taking block, i, j, k
 	let forEachBlock = function(chunk, delegate) {
-		for (let i = 0; i < chunk.size; i++) {
+		// TODO: Could just do it over a single index here
+		for (let k = 0; k < chunk.size; k++) {
 			for (let j = 0; j < chunk.size; j++) {
-				for (let k = 0; k < chunk.size; k++) {
+				for (let i = 0; i < chunk.size; i++) {
 					delegate(
 						Chunk.getBlock(chunk, i, j, k),
 						Chunk.getBlockRotation(chunk, i, j, k),
@@ -398,7 +399,8 @@ module.exports = (function(){
 			return null;
 		}
 
-		var mesh = {
+		// TODO: This could probably be improved by creating the typed array source for the buffers rather than JS native arrays?
+		let mesh = {
 			vertices: [],
 			normals: [],
 			textureCoordinates: [],

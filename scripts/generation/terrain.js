@@ -19,9 +19,9 @@ module.exports = (function() {
 		generateChunk: function(vorld, chunkI, chunkJ, chunkK) {
 			let size = vorld.chunkSize;
 			let maxNoiseValue = 0.5 + this.noiseOffset;
-			for (let i = 0; i < size; i++) {
+			for (let k = 0; k < size; k++) {
 				for (let j = size - 1; j >= 0; j--) {
-					for (let k = 0; k < size; k++) {
+					for (let i = 0; i < size; i++) {
 						let value = 0;
 						let x = i + size * chunkI,
 							y = j + size * chunkJ,

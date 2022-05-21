@@ -1,4 +1,3 @@
-// Module Root - called "Voxel" as "Vorld" is reserved for the Voxel World structure
 module.exports = (function(){
 	let exports = {};
 
@@ -22,7 +21,6 @@ module.exports = (function(){
 	exports.World = require('./world');
 
 	// Workers
-	// Question: how many of these are used externally? (Flora is but not sure the others are)
 	exports.Generator = {
 		Flora: require('./generation/flora'),
 		ShapingFunctions: require('./generation/shapingFunctions'),
