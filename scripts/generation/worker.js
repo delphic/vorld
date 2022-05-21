@@ -40,10 +40,11 @@ module.exports = (function(){
 		}
 	}*/
 	exports.execute = function(data, postMessage) {
+		let startTime = Date.now();
 		let generationRules = data.generationRules;
 		let shapingFunction = generationRules.shapingFunction;
 		let bounds = data.bounds;
-	
+
 		let blockDelegate = (value) => {
 			for (let i = 0, l = generationRules.thresholds.length; i < l; i++) {
 				if (value < generationRules.thresholds[i]) {
@@ -93,7 +94,7 @@ module.exports = (function(){
 			}
 			return block;
 		};
-	
+
 		let generator = TerrainGenerator.create({
 			seed: generationRules.seed,
 			baseWavelength: generationRules.baseWavelength,
@@ -104,7 +105,7 @@ module.exports = (function(){
 			blockDelegate: blockDelegate,
 			verticalTransformationDelegate: verticalTransformationDelegate
 		});
-	
+
 		let count = 0,
 			total = (bounds.iMax - bounds.iMin + 1) *
 				(bounds.jMax - bounds.jMin + 1) *
@@ -112,10 +113,10 @@ module.exports = (function(){
 	
 		let vorld = generator.generate(bounds, () => { 
 			count++;
-			postMessage({ progress: count / total });
+			postMessage({ id: data.id, progress: count / total });
 		});
-	
-		postMessage({ complete: true, vorld: vorld });
+
+		postMessage({ id: data.id, complete: true, vorld: vorld, duration: Date.now() - startTime });
 	};
 
 	return exports;

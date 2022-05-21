@@ -5,6 +5,7 @@ module.exports = (function(){
 	let exports = {};
 
 	exports.execute = function(data, postMessage) {
+		let startTime = Date.now();
 		let id = data.id;
 		let vorld = data.vorld;
 		let bounds = data.bounds;
@@ -19,7 +20,8 @@ module.exports = (function(){
 			// Reduce result into bounds requested
 			vorld = Vorld.createSlice(vorld, bounds.iMin, bounds.iMax, bounds.jMin, bounds.jMax, bounds.kMin, bounds.kMax);
 		}
-		postMessage({ id: id, complete: true, vorld: vorld });
+
+		postMessage({ id: id, complete: true, vorld: vorld, duration: Date.now() - startTime });
 	};
 
 	return exports;

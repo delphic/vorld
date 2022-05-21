@@ -30,6 +30,8 @@ module.exports = (function(){
 		}
 	}*/
 	exports.execute = function(data, postMessage) {
+		let startTime = Date.now();
+		let id = data.id;
 		let vorld = data.vorld;
 		let bounds = data.bounds;
 		let atlas = data.atlas;
@@ -66,6 +68,7 @@ module.exports = (function(){
 					let postedMesh = false;
 					if (mesh && mesh.indices.length) {
 						postMessage({
+							id: id,
 							mesh: mesh,
 							chunkIndices: chunk.indices,
 							progress: count / totalRange
@@ -74,6 +77,7 @@ module.exports = (function(){
 					}
 					if (cutoutMesh && cutoutMesh.indices.length) {
 						postMessage({
+							id: id,
 							mesh: cutoutMesh,
 							chunkIndices: chunk.indices,
 							progress: count / totalRange,
@@ -83,6 +87,7 @@ module.exports = (function(){
 					}
 					if (unlitMesh && unlitMesh.indices.length) {
 						postMessage({
+							id: id,
 							mesh: unlitMesh,
 							chunkIndices: chunk.indices,
 							progress: count / totalRange,
@@ -93,6 +98,7 @@ module.exports = (function(){
 					for (let n = 0; n < alphaMeshes.length; n++) {
 						if (alphaMeshes[n] && alphaMeshes[n].indices.length) {
 							postMessage({
+								id: id,
 								mesh: alphaMeshes[n],
 								chunkIndices: chunk.indices,
 								progress: count / totalRange,
@@ -103,13 +109,13 @@ module.exports = (function(){
 					}
 					
 					if (!postedMesh) {
-						postMessage({ progress: count / totalRange });
+						postMessage({ id: id, progress: count / totalRange });
 					}
 				}
 			}
 		}
 	
-		postMessage({ complete: true });
+		postMessage({ id: data.id, complete: true, duration: Date.now() - startTime });
 	};
 
 	return exports;
