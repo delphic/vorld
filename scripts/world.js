@@ -262,7 +262,33 @@ module.exports = (function() {
 
 	exports.clear = function(vorld) {
 		vorld.chunks = {};
-	}
+	};
+
+	exports.calculateChunkBounds = function(vorld) {
+		let keys = Object.keys(vorld.heightMap);
+
+		let iMin = Number.MAX_SAFE_INTEGER,
+			iMax = Number.MIN_SAFE_INTEGER,
+			jMin = Number.MAX_SAFE_INTEGER,
+			jMax = Number.MIN_SAFE_INTEGER,
+			kMin = Number.MAX_SAFE_INTEGER,
+			kMax = Number.MIN_SAFE_INTEGER; 
+		
+		for (let i = 0, l = keys.length; i < l; i++) {
+			let chunkHeightMap = vorld.heightMap[keys[i]];
+			iMin = Math.min(iMin, chunkHeightMap.chunkI);
+			iMax = Math.max(iMax, chunkHeightMap.chunkI);
+			jMin = Math.min(jMin, chunkHeightMap.minChunkIndex);
+			jMax = Math.max(jMax, chunkHeightMap.maxChunkIndex);
+			kMin = Math.min(kMin, chunkHeightMap.chunkK);
+			kMax = Math.max(kMax, chunkHeightMap.chunkK);
+		}
+
+		if (keys.length) {
+			return { iMin: iMin, iMax: iMax, jMin: jMin, jMax: jMax, kMin: kMin, kMax: kMax };
+		}
+		return null;
+	};
 
 	// Constructor
 	exports.create = function(parameters) {
