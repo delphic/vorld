@@ -14,8 +14,8 @@ module.exports = (function(){
 
 	// Example Post Data
 	/*{
+		seed: "XUVNREAZOZJFPQMSAKEMSDJURTQPWEORHZMD",
 		generationRules: {
-			seed: "XUVNREAZOZJFPQMSAKEMSDJURTQPWEORHZMD",
 			baseWavelength: 128,
 			octaveWeightings: [0.5, 0.5, 1, 0.1],
 			neutralNoise: true,
@@ -96,7 +96,7 @@ module.exports = (function(){
 		};
 
 		let generator = TerrainGenerator.create({
-			seed: generationRules.seed,
+			seed: data.seed,
 			baseWavelength: generationRules.baseWavelength,
 			weightings: generationRules.octaveWeightings,
 			noiseOffset: generationRules.neutralNoise ? 0 : 0.5,

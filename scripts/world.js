@@ -8,7 +8,7 @@
 
 // Default chunk size defined as 16 so that meshes generated for an 
 // entire chunk do not exceed the maximum number of vertices supported.
-
+const { Random } = require('fury');
 const BlockConfig = require('./blockConfig');
 const Chunk = require('./chunk');
 const Utils = require('./utils');
@@ -293,6 +293,11 @@ module.exports = (function() {
 	// Constructor
 	exports.create = function(parameters) {
 		let vorld = {};
+		if (parameters && parameters.seed) {
+			vorld.seed = parameters.seed;
+		} else {
+			vorld.seed = Random.generateSeed(32);
+		}
 		if (parameters && parameters.chunkSize) {
 			vorld.chunkSize = parameters.chunkSize;
 		} else {

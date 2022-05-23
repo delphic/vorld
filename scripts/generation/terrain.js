@@ -61,11 +61,11 @@ module.exports = (function() {
 			return Vorld.getChunk(vorld, chunkI, chunkJ, chunkK);
 		},
 		generate: function(bounds, progressDelegate) {
-			let vorld = Vorld.create();
+			let vorld = Vorld.create({ seed: this.seed });
 			let iMin = bounds.iMin, iMax = bounds.iMax,
 				jMin = bounds.jMin, jMax = bounds.jMax,
 				kMin = bounds.kMin, kMax = bounds.kMax;
-			
+
 			for (let i = iMin; i <= iMax; i++) {
 				for (let k = kMin; k <= kMax; k++) {
 					for (let j = jMax; j >= jMin; j--) {
