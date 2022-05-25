@@ -101,6 +101,7 @@ module.exports = (function(){
 			weightings: generationRules.octaveWeightings,
 			noiseOffset: generationRules.neutralNoise ? 0 : 0.5,
 			minimumBlockThreshold: generationRules.thresholds[0],
+			defaultBlockValue: generationRules.defaultBlockValue,
 			shapingFunction: ShapingFunctions.create(shapingFunction),
 			blockDelegate: blockDelegate,
 			verticalTransformationDelegate: verticalTransformationDelegate

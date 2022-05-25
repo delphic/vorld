@@ -30,15 +30,19 @@ module.exports = (function() {
 						let shapingFactor = this.shapingFunction(x, y, z);
 
 						if (maxNoiseValue * shapingFactor > this.minimumBlockThreshold) {
-							for (let o = 0; o < this.octaves.length; o++) {
-								let wavelength = Math.pow(2, o);
-								let noiseValue = this.octaves[o].noise(
-									wavelength * x / this.baseWavelength,
-									wavelength * y / this.baseWavelength,
-									wavelength * z / this.baseWavelength);
-								value += this.weightings[o] * (this.noiseOffset + noiseValue);
+							if (this.octaves.length) {
+								for (let o = 0; o < this.octaves.length; o++) {
+									let wavelength = Math.pow(2, o);
+									let noiseValue = this.octaves[o].noise(
+										wavelength * x / this.baseWavelength,
+										wavelength * y / this.baseWavelength,
+										wavelength * z / this.baseWavelength);
+									value += this.weightings[o] * (this.noiseOffset + noiseValue);
+								}
+								value /= this.totalWeight;
+							} else {
+								value = this.defaultBlockValue;
 							}
-							value /= this.totalWeight;
 						}
 
 						// This does trigger often... (ironically after we removed it but didn't clear cache)
@@ -98,6 +102,7 @@ module.exports = (function() {
 		generator.verticalTransformationDelegate = config.verticalTransformationDelegate;
 		generator.minimumBlockThreshold = config.minimumBlockThreshold;
 		generator.noiseOffset = config.noiseOffset;
+		generator.defaultBlockValue = config.defaultBlockValue || 0;
 
 		return generator;
 	};
