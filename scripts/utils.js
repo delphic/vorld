@@ -75,6 +75,32 @@ module.exports = (function() {
 		}
 	}; 
 
+	exports.getTileIdFromDirection = (atlas, block, direction) => {
+		let tileId = 0;
+		let map = atlas.blockToTileIndex[block];
+		switch (direction) {
+			case Cardinal.Direction.up:
+				tileId = map.top !== undefined ? map.top : map.side;
+				break;
+			case Cardinal.Direction.down:
+				tileId = map.bottom !== undefined ? map.bottom : map.side;
+				break;
+			case Cardinal.Direction.forward:
+				tileId = map.forward !== undefined ? map.forward : map.side;
+				break;
+			case Cardinal.Direction.back:
+				tileId = map.back !== undefined ? map.back : map.side;
+				break;
+			case Cardinal.Direction.left:
+				tileId = map.left !== undefined ? map.left : map.side;
+				break;
+			case Cardinal.Direction.right:
+				tileId = map.right !== undefined ? map.right : map.side; 
+				break;
+		}
+		return tileId;
+	};
+
 	// Method to generate rotation look ups for cardinal directions
 	exports.calculateCardinalRotationLookupTables = (furyMaths) => {
 		let Maths = furyMaths;
