@@ -4,7 +4,8 @@ module.exports = (function(){
 	let Name = exports.Name = {
 		Gaussian: "gaussian",
 		NegativeY: "negative_y",
-		InverseY: "inverse_y"
+		InverseY: "inverse_y",
+		Expression: "expression",
 	};
 
 	let createGaussian = (config) => {
@@ -24,6 +25,8 @@ module.exports = (function(){
 					return (x, y, z) => (config.yOffset - y) / config.yDenominator;
 				case Name.InverseY:
 					return (x, y, z) => config.numerator / (y + config.yOffset);
+				case Name.Expression:
+					return eval(config.expression);
 				default:
 					return (x, y, z) => 0;
 			}

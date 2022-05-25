@@ -47,7 +47,7 @@ module.exports = (function(){
 
 		let blockDelegate = (value) => {
 			for (let i = 0, l = generationRules.thresholds.length; i < l; i++) {
-				if (value < generationRules.thresholds[i]) {
+				if (value <= generationRules.thresholds[i]) {
 					return generationRules.blocksByThreshold[i];
 				}
 			}
