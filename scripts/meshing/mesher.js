@@ -60,15 +60,17 @@ module.exports = (function(){
 		// NOTE: Has artifacts on unequal corner values, depending on orientation of triangles in the quad (i.e. anisotropy)
 		// It is not very noticable for sutble levels of AO however
 		// NOTE 2: this method was only really designed to work on vertices on the grid points, 
-		// and as such has artifacts when used on custom mesh vertices that could be anywhere in the cube
-		// however it looks better than *no* AO 
-		// TODO: Adapt calculation to work to interpolate the AO level as appropriate for off grid vertices.
-		// NOTE 3: Does not take account of custom mesh vertices due to it's isBlockOpaque approach
-		// however it would probably be preferable to work on a full dynamic voxel lighting technique than adjust
-		// this method both calculate AO for custom meshes and due to their effect
-		aov[0] = Math.round(2 * (vertex[0] - i - 0.5));
-		aov[1] = Math.round(2 * (vertex[1] - j - 0.5));
-		aov[2] = Math.round(2 * (vertex[2] - k - 0.5));
+		// and as such probably has artifacts when used on custom mesh vertices that could be anywhere in the cube
+		// however it looks better than *no* AO - currently querying on the same axis as the block when non-integer
+		// copying what we do for lighting, but haven't really thougth about if it's accurate, but it looks better
+		// TODO: Adapt calculation to work to interpolate the AO level as appropriate for off grid vertices rather than
+		// changing the query position.
+		// NOTE 3: Custom mesh vertices do not general any baked AO (only full blocks by querying isBlockOpaque)
+		// however it would probably be preferable to work on a full dynamic voxel lighting technique rather than adjust
+		// this method to both calculate AO in custom meshes as well as calculate AO due to their presence
+		aov[0] = (Maths.approximately(vertex[0], Math.round(vertex[0]), 0.0001)) ? Math.round(2 * (vertex[0] - i - 0.5)) : 0;
+		aov[1] = (Maths.approximately(vertex[1], Math.round(vertex[1]), 0.0001)) ? Math.round(2 * (vertex[1] - j - 0.5)) : 0;
+		aov[2] = (Maths.approximately(vertex[2], Math.round(vertex[2]), 0.0001)) ? Math.round(2 * (vertex[2] - k - 0.5)) : 0;
 		let side0 = 0, side1 = 0, corner = 0;
 		let x = chunkI * vorld.chunkSize + i, y = chunkJ * vorld.chunkSize + j, z = chunkK * vorld.chunkSize + k;
 		switch(direction)
@@ -98,10 +100,11 @@ module.exports = (function(){
 	};
 
 	let calculateLightLevel = (vorld, vertex, direction, i, j, k, chunkI, chunkJ, chunkK, getLightDelegate) => {
-		// For - non-smooth just return adj block light value
-		aov[0] = Math.round(2 * (vertex[0] - i - 0.5));
-		aov[1] = Math.round(2 * (vertex[1] - j - 0.5));
-		aov[2] = Math.round(2 * (vertex[2] - k - 0.5));
+		// Return adj block light value - if vertex is at integer position
+		// if it's it mid block, just return the block light value 
+		aov[0] = (Maths.approximately(vertex[0], Math.round(vertex[0]), 0.0001)) ? Math.round(2 * (vertex[0] - i - 0.5)) : 0;
+		aov[1] = (Maths.approximately(vertex[1], Math.round(vertex[1]), 0.0001)) ? Math.round(2 * (vertex[1] - j - 0.5)) : 0;
+		aov[2] = (Maths.approximately(vertex[2], Math.round(vertex[2]), 0.0001)) ? Math.round(2 * (vertex[2] - k - 0.5)) : 0;
 		let adj = 0, side0 = 0, side1 = 0, corner = 0;
 		switch(direction)
 		{
