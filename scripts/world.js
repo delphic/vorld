@@ -262,6 +262,7 @@ module.exports = (function() {
 
 	exports.clear = function(vorld) {
 		vorld.chunks = {};
+		vorld.heightMap = {};
 	};
 
 	exports.calculateChunkBounds = function(vorld) {
