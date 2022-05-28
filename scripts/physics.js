@@ -1,5 +1,6 @@
 // Vorld Physics
-const { Maths, Mesh } = require('fury');
+const { Maths, Mesh, Physics } = require('fury');
+const { vec3 } = Maths;
 const BlockConfig = require('./blockConfig');
 const Utils = require('./utils');
 const Vorld = require('./world');
@@ -33,7 +34,61 @@ module.exports = (function(){
 		return box;
 	};
 
-	exports.appendAABBsForBlock = (out, vorld, x, y, z, createBoxDelegate) => {
+	let aabbPool = (function(){
+		// A slightly wierd pool (you don't return the boxes, 
+		// you merely reset when you've finish your calculation)
+		// Up to calling code to use the result before making another
+		// calculation that uses the pool.
+		let exports = {};
+		let boxes = [];
+		let nextIndex = 0;
+	
+		for (let i = 0; i < 20; i++) {
+			boxes[i] = Physics.Box.create({ min: vec3.create(), max: vec3.create() });
+		}
+	
+		exports.requestBox = (x, y, z) => {
+			if (nextIndex < boxes.length) {
+				let result = boxes[nextIndex++];
+				vec3.set(result.min, x, y, z);
+				vec3.set(result.max, x+1, y+1, z+1);
+				nextIndex++;
+				return result;
+			}
+			return boxes[nextIndex++] = Physics.Box.create({ min: vec3.fromValues(x, y, z), max: vec3.fromValues(x+1, y+1, z+1) });
+		};
+
+		exports.reset = () => {
+			nextIndex = 0;
+		};
+
+		return exports;
+	})();
+	
+
+	// Quick and dirty sweep, create AABBs for solid voxels
+	// NOTE: only one sweep valid at a time
+	exports.sweep = (out, vorld, sweepBox) => {
+		let xMin = Math.floor(sweepBox.min[0]);
+		let xMax = Math.floor(sweepBox.max[0]);
+		let yMin = Math.floor(sweepBox.min[1]);
+		let yMax = Math.floor(sweepBox.max[1]);
+		let zMin = Math.floor(sweepBox.min[2]);
+		let zMax = Math.floor(sweepBox.max[2]);
+
+		for (let x = xMin; x <= xMax; x++) {
+			for (let y = yMin; y <= yMax; y++) {
+				for (let z = zMin; z <= zMax; z++) {
+					// TODO: Layers would be nice
+					appendAABBsForBlock(out, vorld, x, y, z, aabbPool.requestBox);
+				}
+			}
+		}
+		// Reset pool - boxes place in out only valid until next use of pool
+		aabbPool.reset();
+	};
+
+	let appendAABBsForBlock = (out, vorld, x, y, z, pool) => {
 		// Based block definition and rotation + position, append as many AABB's as relevant
 		let block = Vorld.getBlock(vorld, x, y, z);
 		if (block) {
@@ -42,11 +97,11 @@ module.exports = (function(){
 				return;
 			}
 			if (!def.mesh) {
-				out.push(createBoxDelegate(x, y, z));
+				out.push(pool.requestBox(x, y, z));
 			} else if (def.collision) {
 				// Collision is an array of bounds provided relative to the voxel origin (when not rotated)
 				for (let i = 0, l = def.collision.length; i < l; i++) {
-					let box = createBoxDelegate(x, y, z);
+					let box = pool.requestBox(x, y, z);
 					Maths.vec3.copy(box.min, def.collision[i].min);
 					Maths.vec3.copy(box.max, def.collision[i].max);
 
@@ -54,7 +109,7 @@ module.exports = (function(){
 					out.push(box);
 				}
 			} else {
-				let box = createBoxDelegate(x, y, z); 
+				let box = pool.requestBox(x, y, z); 
 
 				// NOTE: Anything with more than one AABB will need them specifying manually 
 				// and individually transformed rather than using calculations (e.g. steps)
@@ -67,7 +122,7 @@ module.exports = (function(){
 		}
 	};
 
-	let voxel = [];
+	let voxel = [], aabbs = [], customBoundsHitPoint = [];
 	exports.raycast = (outHitPoint, vorld, origin, direction, distance) => {
 		if (distance === undefined || distance === null) {
 			distance = 1 / 0; // Infinite! Super Big!
@@ -132,10 +187,24 @@ module.exports = (function(){
 			}
 			
 			// Check for collision
-			let block = Vorld.getBlock(vorld, voxel[0], voxel[1], voxel[2]);
-			if (block && BlockConfig.isBlockTypeSolid(vorld, block)) { // TODO: Might want to replace with layers rather than isSolid
+			let [ x, y, z ] = voxel;
+			let block = Vorld.getBlock(vorld, x, y, z);
+			let blockDef = BlockConfig.getBlockTypeDefinition(vorld, block);
+			if (block && blockDef.isSolid) { // TODO: Might want to replace with layers rather than isSolid
 				// Might be interesting to check that origin + s * direction = hitPoint (float precision)
-				return s;
+				if (!blockDef.collision && !blockDef.mesh) {
+					return s;
+				} else {
+					// check custom collision mesh
+					aabbs.length = 0;
+					appendAABBsForBlock(aabbs, vorld, x, y, z, aabbPool);
+					for(let i = 0, l = aabbs.length; i < l; i++) {
+						if (Physics.Box.rayCast(customBoundsHitPoint, origin, direction, aabbs[i])) {
+							return s;
+						}
+					}
+					aabbPool.reset();
+				}
 			} else if (block === null) {
 				// No chunk - assume world has ended
 				// TODO: skip to next chunk
