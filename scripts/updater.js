@@ -17,7 +17,41 @@ module.exports = (function(){
 
 		// Update Sunlight
 		if (block) {
-			Lighting.removeSunlight(vorld, x, y, z);
+			let chunkYMax = Math.floor(y / vorld.chunkSize) * vorld.chunkSize + 15;
+			if (previousBlock !== null) {
+				Lighting.removeSunlight(vorld, x, y, z);
+			} 
+			
+			let fillNewChunk = previousBlock === null; // Added new chunk 
+			if (chunkYMax == y && World.getBlock(vorld, x, y + 1, z) === null) {
+				// At top of existing chunk and there isn't one above 
+				// so to light the top of the added block create a chunk above
+				World.setBlock(vorld, x, y+1, z, 0);
+				chunkYMax += 16;
+				fillNewChunk = true;
+				// BUG: There is also lighting artifact when adding at the limits of the 
+				// chunk on the x/z axes or the bottom of a chunk, ideally all chunks with 
+				// any set blocks would have all adjacent including diagonally and double
+				// diagonally adjacent chunks created and filled with sunlight appropriately
+				// However current state is workable with for current requirements. 
+			} 
+
+			let chunkXMin = Math.floor(x / vorld.chunkSize) * vorld.chunkSize;
+			let chunkZMin = Math.floor(z / vorld.chunkSize) * vorld.chunkSize;
+			if (fillNewChunk){
+				// add sunlight across top of chunk if heightmap allows
+				for (let i = 0; i < vorld.chunkSize; i++) {
+					for (let k = 0; k < vorld.chunkSize; k++) {
+						let sx = chunkXMin + i, sz = chunkZMin + k;
+						let highestBlockY = World.getHighestBlockY(vorld, sx, sz); 
+						if (highestBlockY === undefined || highestBlockY < chunkYMax && (sx != x || chunkYMax != y || sz != z)) {
+							Lighting.addSunlight(vorld, sx, chunkYMax, sz);
+						}
+					}
+				}
+			}
+
+
 		} else if (y == previousYMax) {
 			Lighting.addSunlight(vorld, x, previousYMax + 1, z); // Potn BUG: what if previousYMax is also the very top of the world? Should do min of max value and prevYMax + 1
 		}
