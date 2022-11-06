@@ -206,9 +206,15 @@ module.exports = (function(){
 					aabbPool.reset();
 				}
 			} else if (block === null) {
-				// No chunk - assume world has ended
-				// TODO: skip to next chunk
-				// TODO: Return 0 if no chunks remaining rather than first empty
+				// no chunk
+				if (distance <  1/0) {
+					// if distance specified, just keep going until 
+					// we reach distance or find a new chunk
+					continue;
+					// TODO: skip straight to next chunk
+				}
+				// if distnace infinite assume world has ended at this point
+				// ideally would only return 0 if no chunks remaining rather than first empty
 				return 0;
 			}
 		}
