@@ -109,7 +109,21 @@ module.exports = (function(){
 					}
 					
 					if (!postedMesh) {
-						postMessage({ id: id, progress: count / totalRange });
+						if (chunk) {
+							// Post message with chunk indices property to indicate an
+							// existing chunk now has no meshes associated
+							postMessage({
+								id: id,
+								chunkIndices: chunk.indices,
+								progress: count / totalRange
+							});
+						} else {
+							// Post to indicate chunk skipped (as it is null)
+							postMessage({
+								id: id,
+								progress: count / totalRange
+							});
+						}
 					}
 				}
 			}
