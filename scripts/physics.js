@@ -80,7 +80,7 @@ module.exports = (function(){
 			for (let y = yMin; y <= yMax; y++) {
 				for (let z = zMin; z <= zMax; z++) {
 					// TODO: Layers would be nice
-					appendAABBsForBlock(out, vorld, x, y, z, aabbPool.requestBox);
+					appendAABBsForBlock(out, vorld, x, y, z, aabbPool);
 				}
 			}
 		}
