@@ -180,5 +180,15 @@ module.exports = (function() {
 		}
 	};
 
+	exports.createBlockIdsLookup = (vorld) => {
+		let blockIds = {};
+		if (vorld.blockConfig) {
+			for (let i = 0, l = vorld.blockConfig.length; i < l; i++) {
+				blockIds[vorld.blockConfig[i].name] = i;
+			}
+		}
+		return blockIds;
+	};
+
 	return exports;
 })();
