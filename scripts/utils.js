@@ -102,8 +102,7 @@ module.exports = (function() {
 	};
 
 	// Method to generate rotation look ups for cardinal directions
-	exports.calculateCardinalRotationLookupTables = (furyMaths) => {
-		let Maths = furyMaths;
+	exports.calculateCardinalRotationLookupTables = () => {
 		let quat = Maths.quat;
 		
 		let createQuat = (cardinalRotations) => {
