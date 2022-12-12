@@ -28,6 +28,9 @@ module.exports = (function(){
 	};
 	exports.Mesher = require('./meshing/mesher');
 	exports.Lighter = require('./lighting/lighter');
+	exports.MeshingWorker =require('./meshing/worker');
+	exports.LightingWorker = require('./lighting/worker');
+	exports.TerrianWorker = require('./generation/worker');
 
 	// Data Structures
 	exports.VectorQueue = require('./vectorQueue');

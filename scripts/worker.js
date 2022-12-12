@@ -14,5 +14,9 @@ onmessage = function(e) {
 		case "meshing": 
 			MeshingWorker.execute(data, this.postMessage);
 			break;
+		default:
+			console.warn("Unsupported job type " + data.jobType);
+			postMessage({ id: data.id, complete: true, duration: 0 });
+			break;
 	}
 };
