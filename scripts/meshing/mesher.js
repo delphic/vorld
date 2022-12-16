@@ -189,8 +189,8 @@ module.exports = (function(){
 			let light = 0, sunlight = 0;
 			if (blockDef && blockDef.light) {
 				// Use own light if a light emitting block
-				light = Vorld.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j, k);
-				sunlight = Vorld.getBlockSunlightByIndex(vorld, chunkI, chunkJ, chunkK, i, j, k);
+				light = Lighting.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j, k);
+				sunlight = Lighting.getBlockSunlightByIndex(vorld, chunkI, chunkJ, chunkK, i, j, k);
 			} else {
 				// else get the adjacent blocks light
 				light = calculateLightLevel(vorld, vector, direction, i , j, k, chunkI, chunkJ, chunkK, Lighting.getBlockLightByIndex);
