@@ -159,8 +159,8 @@ module.exports = (function(){
 	}
 
 	let addQuadToMesh = function(mesh, vorld, atlas, block, rotation, direction, i, j, k, chunkI, chunkJ, chunkK, offsetMagnitude) {
-		let tile, offset, n = mesh.vertices.length / 3;
-		let vertices, normals, textureCoordinates;
+		let tile, offset, n = mesh.positions.length / 3;
+		let positions, normals, uvs;
 
 		let localDirection = Cardinal.reverseTransformDirection(direction, rotation);
 
@@ -168,16 +168,16 @@ module.exports = (function(){
 		tile = getTileIndexFromAtlas(atlas, block, localDirection);
 
 		offset = localDirection * 12;
-		vertices = cubeJson.vertices.slice(offset, offset + 12);
+		positions = cubeJson.positions.slice(offset, offset + 12);
 		
 		let lightBake = [];
 
 		let tileIndices = [ tile, tile, tile, tile ];
 		let vector = [];
 		for (let index = 0; index < 4; index++) {
-			vector[0] = vertices[3*index];
-			vector[1] = vertices[3*index + 1];
-			vector[2] = vertices[3*index + 2];
+			vector[0] = positions[3*index];
+			vector[1] = positions[3*index + 1];
+			vector[2] = positions[3*index + 2];
 			
 			Utils.transformPointToVorldSpace(vector, rotation, i, j, k);
 
@@ -208,9 +208,9 @@ module.exports = (function(){
 				vector[2] += offsetVector[2] * offsetMagnitude;
 			}
 
-			vertices[3*index] = vector[0];
-			vertices[3*index + 1] = vector[1];
-			vertices[3*index + 2] = vector[2];
+			positions[3*index] = vector[0];
+			positions[3*index + 1] = vector[1];
+			positions[3*index + 2] = vector[2];
 		}
 	
 		normals = cubeJson.normals.slice(offset, offset + 12);
@@ -234,11 +234,11 @@ module.exports = (function(){
 		} else {
 			offset = direction * 8;
 		}
-		textureCoordinates = cubeJson.textureCoordinates.slice(offset, offset + 8);
+		uvs = cubeJson.uvs.slice(offset, offset + 8);
 
-		concat(mesh.vertices, vertices);
+		concat(mesh.positions, positions);
 		concat(mesh.normals, normals);
-		concat(mesh.textureCoordinates, textureCoordinates);
+		concat(mesh.uvs, uvs);
 		concat(mesh.tileIndices, tileIndices);
 		concat(mesh.lightBake, lightBake);
 		mesh.indices.push(n,n+1,n+2, n,n+2,n+3);
@@ -248,30 +248,30 @@ module.exports = (function(){
 		// Rotate and offset vertices
 		// For each normal determine direction and create appropriate tile index
 		// concat into mesh
-		let n = mesh.vertices.length / 3;
-		let vertices = [], normals = [], tileIndices = [], indices = [];
+		let n = mesh.positions.length / 3;
+		let positions = [], normals = [], tileIndices = [], indices = [];
 
 		let blockDef = BlockConfig.getBlockTypeDefinition(vorld, block);
 		let lightBake = [];
 
-		let vertex = [], normal = [];
-		for (let index = 0, l = customMesh.vertices.length; index < l; index += 3) {
-			vertex[0] = customMesh.vertices[index];
-			vertex[1] = customMesh.vertices[index + 1];
-			vertex[2] = customMesh.vertices[index + 2];
+		let position = [], normal = [];
+		for (let index = 0, l = customMesh.positions.length; index < l; index += 3) {
+			position[0] = customMesh.positions[index];
+			position[1] = customMesh.positions[index + 1];
+			position[2] = customMesh.positions[index + 2];
 			
 			if (rotation) {
-				Maths.offsetVector(vertex, -0.5, -0.5, -0.5);
-				Cardinal.transformVector(vertex, rotation);
-				Maths.offsetVector(vertex, 0.5 + i, 0.5 + j, 0.5 + k);
-				Maths.snapVector(vertex);
+				Maths.offsetVector(position, -0.5, -0.5, -0.5);
+				Cardinal.transformVector(position, rotation);
+				Maths.offsetVector(position, 0.5 + i, 0.5 + j, 0.5 + k);
+				Maths.snapVector(position);
 			} else {
-				Maths.offsetVector(vertex, i, j, k);
+				Maths.offsetVector(position, i, j, k);
 			}
 
-			vertices[index] = vertex[0];
-			vertices[index + 1] = vertex[1];
-			vertices[index + 2] = vertex[2];
+			positions[index] = position[0];
+			positions[index + 1] = position[1];
+			positions[index + 2] = position[2];
 		}
 
 		for (let index = 0, l = customMesh.normals.length; index < l; index += 3) {
@@ -279,9 +279,9 @@ module.exports = (function(){
 			normal[1] = customMesh.normals[index + 1];
 			normal[2] = customMesh.normals[index + 2];
 
-			vertex[0] = vertices[index];
-			vertex[1] = vertices[index + 1];
-			vertex[2] = vertices[index + 2];
+			position[0] = positions[index];
+			position[1] = positions[index + 1];
+			position[2] = positions[index + 2];
 
 			let direction = Cardinal.getDirectionFromVector(normal);
 			let tileIndex = getTileIndexFromAtlas(atlas, block, direction);
@@ -295,7 +295,7 @@ module.exports = (function(){
 			direction = Cardinal.getDirectionFromVector(normal);
 
 			// Calculate AO and pack into tileIndex 
-			tileIndex += calculateAOLevel(vorld, vertex, direction, i, j, k, chunkI, chunkJ, chunkK);
+			tileIndex += calculateAOLevel(vorld, position, direction, i, j, k, chunkI, chunkJ, chunkK);
 			tileIndices.push(tileIndex);
 
 			let light = 0, sunlight = 0;
@@ -306,8 +306,8 @@ module.exports = (function(){
 			} else {
 				// else get the adjacent blocks light
 				// NOTE: assumes normal is axis aligned unit vector
-				light = calculateLightLevel(vorld, vertex, direction, i , j, k, chunkI, chunkJ, chunkK, Lighting.getBlockLightByIndex);
-				sunlight = calculateLightLevel(vorld, vertex, direction, i , j, k, chunkI, chunkJ, chunkK, Lighting.getBlockSunlightByIndex);
+				light = calculateLightLevel(vorld, position, direction, i , j, k, chunkI, chunkJ, chunkK, Lighting.getBlockLightByIndex);
+				sunlight = calculateLightLevel(vorld, position, direction, i , j, k, chunkI, chunkJ, chunkK, Lighting.getBlockSunlightByIndex);
 			}
 			lightBake.push(light + (sunlight / 16));
 
@@ -320,46 +320,46 @@ module.exports = (function(){
 			indices.push(customMesh.indices[index] + n);
 		}
 
-		let textureCoordinates = customMesh.textureCoordinates;
+		let uvs = customMesh.uvs;
 		if (!blockDef.rotateTextureCoords) {
-			textureCoordinates = [];
-			for (let index = 0, l = vertices.length; index < l; index += 3) {
+			uvs = [];
+			for (let index = 0, l = positions.length; index < l; index += 3) {
 				normal[0] = normals[index];
 				normal[1] = normals[index + 1];
 				normal[2] = normals[index + 2];
 
-				vertex[0] = vertices[index];
-				vertex[1] = vertices[index + 1];
-				vertex[2] = vertices[index + 2];
+				position[0] = positions[index];
+				position[1] = positions[index + 1];
+				position[2] = positions[index + 2];
 
 				// NOTE assumes normalized AA normals
 				if (Maths.approximately(Math.abs(normal[0]), 1, 0.001)) {
 					// Use z/y coords
 					if (normal[0] < 0) {
-						textureCoordinates.push(vertex[2] - k);
+						uvs.push(position[2] - k);
 					} else {
-						textureCoordinates.push(1.0 - (vertex[2] - k));
+						uvs.push(1.0 - (position[2] - k));
 					}
-					textureCoordinates.push(vertex[1] - j);
+					uvs.push(position[1] - j);
 				} else if (Maths.approximately(Math.abs(normal[1]), 1, 0.001)) {
 					// Use x/z coords
-					textureCoordinates.push(vertex[0] - i);
-					textureCoordinates.push(vertex[2] - k);
+					uvs.push(position[0] - i);
+					uvs.push(position[2] - k);
 				} else {
 					// Use x/y coords
 					if (normal[2] > 0) {
-						textureCoordinates.push(vertex[0] - i);
+						uvs.push(position[0] - i);
 					} else {
-						textureCoordinates.push(1.0 - (vertex[0] - i));
+						uvs.push(1.0 - (position[0] - i));
 					}
-					textureCoordinates.push(vertex[1] - j);
+					uvs.push(position[1] - j);
 				}
 			}
 		}
 
-		concat(mesh.vertices, vertices);
+		concat(mesh.positions, positions);
 		concat(mesh.normals, normals);
-		concat(mesh.textureCoordinates, textureCoordinates);
+		concat(mesh.uvs, uvs);
 		concat(mesh.tileIndices, tileIndices);
 		concat(mesh.lightBake, lightBake);
 		concat(mesh.indices, indices);
@@ -382,9 +382,9 @@ module.exports = (function(){
 
 		// TODO: This could probably be improved by creating the typed array source for the buffers rather than JS native arrays?
 		let mesh = {
-			vertices: [],
+			positions: [],
 			normals: [],
-			textureCoordinates: [],
+			uvs: [],
 			tileIndices: [],
 			lightBake: [],
 			indices: [],

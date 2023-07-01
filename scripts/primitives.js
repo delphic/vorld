@@ -5,7 +5,7 @@ module.exports = (function(){
 	exports.createCuboidMeshJson = (xMin, xMax, yMin, yMax, zMin, zMax) => {
 		// Note no UV offset - mapped directly to world position
 		return {
-			vertices: [
+			positions: [
 				// forward
 				xMin, yMin, zMax,
 				xMax, yMin, zMax,
@@ -67,7 +67,7 @@ module.exports = (function(){
 				-1.0, 0.0, 0.0,
 				-1.0, 0.0, 0.0,
 				-1.0, 0.0, 0.0],
-			textureCoordinates: [
+			uvs: [
 				// forward
 				xMin, yMin,
 				xMax, yMin,
@@ -107,7 +107,7 @@ module.exports = (function(){
 		let json =  null;
 		if (axis == 0) {
 			json = {
-				vertices: [
+				positions: [
 					value, 0.0, 0.0,
 					value, 0.0, 1.0,
 					value, 1.0, 1.0,
@@ -117,7 +117,7 @@ module.exports = (function(){
 					normal, 0.0, 0.0,
 					normal, 0.0, 0.0,
 					normal, 0.0, 0.0 ],
-				textureCoordinates: [
+				uvs: [
 					0.0, 0.0,
 					1.0, 0.0,
 					1.0, 1.0,
@@ -125,7 +125,7 @@ module.exports = (function(){
 			};
 		} else if (axis == 2) {
 			json = {
-				vertices: [
+				positions: [
 					0.0, 0.0, value,
 					1.0, 0.0, value,
 					1.0, 1.0, value,
@@ -135,7 +135,7 @@ module.exports = (function(){
 					0.0, 0.0, normal,
 					0.0, 0.0, normal,
 					0.0, 0.0, normal ],
-				textureCoordinates: [
+				uvs: [
 					0.0, 0.0,
 					1.0, 0.0,
 					1.0, 1.0,
@@ -143,7 +143,7 @@ module.exports = (function(){
 			};
 		} else {
 			json = {
-				vertices: [
+				positions: [
 					0.0, value, 0.0,
 					1.0, value, 0.0,
 					1.0, value, 1.0,
@@ -153,7 +153,7 @@ module.exports = (function(){
 					0.0, normal, 0.0,
 					0.0, normal, 0.0,
 					0.0, normal, 0.0 ],
-				textureCoordinates: [
+				uvs: [
 					0.0, 0.0,
 					1.0, 0.0,
 					1.0, 1.0,

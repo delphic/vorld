@@ -113,8 +113,8 @@ module.exports = (function(){
 
 				// NOTE: Anything with more than one AABB will need them specifying manually 
 				// and individually transformed rather than using calculations (e.g. steps)
-				Mesh.calculateMinPoint(box.min, def.mesh.vertices);
-				Mesh.calculateMaxPoint(box.max, def.mesh.vertices);
+				Mesh.calculateMinPoint(box.min, def.mesh.positions);
+				Mesh.calculateMaxPoint(box.max, def.mesh.positions);
 				
 				transformBoxToVorldSpace(box, vorld, x, y, z);
 				out.push(box);
