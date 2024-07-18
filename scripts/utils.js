@@ -103,7 +103,10 @@ module.exports = (function() {
 
 	// Method to generate rotation look ups for cardinal directions
 	exports.calculateCardinalRotationLookupTables = () => {
-		let quat = Maths.quat;
+		// Not entirely sure this'll work - as seems to want to use Fury.Maths
+		// but the import is for Vorld maths, which does not re-export the Fury module
+		// None the less updating to match Fury v0.1.1 updated utility extensions
+		let quat = Maths.quat; 
 		
 		let createQuat = (cardinalRotations) => {
 			let result = quat.create();
@@ -111,13 +114,13 @@ module.exports = (function() {
 				for (let i = 0, l = cardinalRotations.length; i < l; i++) {
 					let rotation = cardinalRotations[i];
 					if (rotation[0]) {
-						Maths.quatRotate(result, result, rotation[0] * Math.PI/2, Maths.vec3X);
+						Maths.quat.rotate(result, result, rotation[0] * Math.PI/2, Maths.vec3.X);
 					}
 					if (rotation[1]) {
-						Maths.quatRotate(result, result, rotation[1] * Math.PI/2, Maths.vec3Y);
+						Maths.quat.rotate(result, result, rotation[1] * Math.PI/2, Maths.vec3.Y);
 					}
 					if (rotation[2]) {
-						Maths.quatRotate(result, result, rotation[2] * Math.PI/2, Maths.vec3Z);
+						Maths.quat.rotate(result, result, rotation[2] * Math.PI/2, Maths.vec3.Z);
 					}
 				}
 			}
