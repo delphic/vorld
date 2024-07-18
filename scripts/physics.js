@@ -68,7 +68,7 @@ module.exports = (function(){
 
 	// Quick and dirty sweep, create AABBs for solid voxels
 	// NOTE: only one sweep valid at a time
-	exports.sweep = (out, vorld, sweepBox) => {
+	exports.sweep = (out, vorld, sweepBox, layers) => {
 		let xMin = Math.floor(sweepBox.min[0]);
 		let xMax = Math.floor(sweepBox.max[0]);
 		let yMin = Math.floor(sweepBox.min[1]);
@@ -79,8 +79,7 @@ module.exports = (function(){
 		for (let x = xMin; x <= xMax; x++) {
 			for (let y = yMin; y <= yMax; y++) {
 				for (let z = zMin; z <= zMax; z++) {
-					// TODO: Layers would be nice
-					appendAABBsForBlock(out, vorld, x, y, z, aabbPool);
+					appendAABBsForBlock(out, vorld, x, y, z, aabbPool, layers);
 				}
 			}
 		}
@@ -88,12 +87,25 @@ module.exports = (function(){
 		aabbPool.reset();
 	};
 
-	let appendAABBsForBlock = (out, vorld, x, y, z, pool) => {
+	let matchesLayer = (def, layers) => {
+		// TODO: Replace with appropriate simple bitwise check (def.layer & layers)
+		if (layers === undefined) {
+			// Default - hit only blocks defined as solid 
+			return def.isSolid;
+		}
+		// HACK: currently any non-zero layer matches all blocks other than air
+		return def.name != "air"; 
+		// However, the ability to customise on solid, liquid and vegetation, likely to be useful.
+		// You're likely to want to exclude the liquid you're in during a raycast if the origin is in liquid, for example.
+		// Would be preferable to allow vorld.config extend layers to define custom voxel layers per game.
+	};
+
+	let appendAABBsForBlock = (out, vorld, x, y, z, pool, layers) => {
 		// Based block definition and rotation + position, append as many AABB's as relevant
 		let block = Vorld.getBlock(vorld, x, y, z);
 		if (block) {
 			let def = BlockConfig.getBlockTypeDefinition(vorld, block);
-			if (!def || !def.isSolid) {
+			if (!def || !matchesLayer(def, layers)) {
 				return;
 			}
 			if (!def.mesh) {
@@ -115,7 +127,8 @@ module.exports = (function(){
 				// and individually transformed rather than using calculations (e.g. steps)
 				Mesh.calculateMinPoint(box.min, def.mesh.positions);
 				Mesh.calculateMaxPoint(box.max, def.mesh.positions);
-				
+				// TODO: consider caching this
+
 				transformBoxToVorldSpace(box, vorld, x, y, z);
 				out.push(box);
 			}
@@ -123,7 +136,7 @@ module.exports = (function(){
 	};
 
 	let voxel = [], aabbs = [], customBoundsHitPoint = [];
-	exports.raycast = (outHitPoint, vorld, origin, direction, distance) => {
+	exports.raycast = (outHitPoint, vorld, origin, direction, distance, layers) => {
 		if (distance === undefined || distance === null) {
 			distance = 1 / 0; // Infinite! Super Big!
 		}
@@ -190,14 +203,14 @@ module.exports = (function(){
 			let [ x, y, z ] = voxel;
 			let block = Vorld.getBlock(vorld, x, y, z);
 			let blockDef = BlockConfig.getBlockTypeDefinition(vorld, block);
-			if (block && blockDef.isSolid) { // TODO: Might want to replace with layers rather than isSolid
+			if (block && matchesLayer(blockDef, layers)) {
 				// Might be interesting to check that origin + s * direction = hitPoint (float precision)
 				if (!blockDef.collision && !blockDef.mesh) {
 					return s;
 				} else {
 					// check custom collision mesh
 					aabbs.length = 0;
-					appendAABBsForBlock(aabbs, vorld, x, y, z, aabbPool);
+					appendAABBsForBlock(aabbs, vorld, x, y, z, aabbPool, layers);
 					for(let i = 0, l = aabbs.length; i < l; i++) {
 						if (Physics.Box.rayCast(customBoundsHitPoint, origin, direction, aabbs[i])) {
 							return s;
@@ -213,7 +226,7 @@ module.exports = (function(){
 					continue;
 					// TODO: skip straight to next chunk
 				}
-				// if distnace infinite assume world has ended at this point
+				// if distance infinite assume world has ended at this point
 				// ideally would only return 0 if no chunks remaining rather than first empty
 				return 0;
 			}
