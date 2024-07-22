@@ -105,9 +105,13 @@ module.exports = (function(){
 		aov[0] = (Maths.approximately(vertex[0], Math.round(vertex[0]), 0.0001)) ? Math.round(2 * (vertex[0] - i - 0.5)) : 0;
 		aov[1] = (Maths.approximately(vertex[1], Math.round(vertex[1]), 0.0001)) ? Math.round(2 * (vertex[1] - j - 0.5)) : 0;
 		aov[2] = (Maths.approximately(vertex[2], Math.round(vertex[2]), 0.0001)) ? Math.round(2 * (vertex[2] - k - 0.5)) : 0;
+		// ^^ the values that come out of this will be -1, 0, 1 depending on if at integer position, anywhere mid block, or at integer position
 		let adj = 0, side0 = 0, side1 = 0, corner = 0;
 		switch(direction)
 		{
+			// TODO: We need to adjust this for (directional) light attenutation of the block in question
+			// see what's happening with half blocks - presumably only if at integer position, i.e. if aov is not 0
+			// can't just do it in the delegate because the direction is important
 			case Cardinal.Direction.up:
 			case Cardinal.Direction.down:
 				adj = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k) || 0;
@@ -118,7 +122,7 @@ module.exports = (function(){
 					// If no light at side0 and side1 they may be opaque in which case we should ignore any light value from corner
 					let x = chunkI * vorld.chunkSize + i, y = chunkJ * vorld.chunkSize + j, z = chunkK * vorld.chunkSize + k;
 					if (Vorld.isBlockOpaque(vorld, x + aov[0], y + aov[1], z) 
-						&& Vorld.isBlockOpaque(vorld, x, y + aov[1], z + aov[2])) {
+						&& Vorld.isBlockOpaque(vorld, x, y + aov[1], z + aov[2])) { // this will need to also check for attenutation? 
 						corner = 0;
 					}
 				}
