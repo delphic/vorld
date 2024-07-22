@@ -99,6 +99,28 @@ module.exports = (function(){
 		}
 	};
 
+	let getAttenuatedLight = (vorld, chunkI, chunkJ, chunkK, i, j, k, axis, aov, getLightDelegate) => {
+		// this is vile, so many lookups, and converting back to x,y,z only to go back to indices
+		// and some of these look ups might be dupes across calls, still this will be an interesting test to see if it works
+		let light = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i, j, k);
+		if (aov[axis] != 0) { // not entirely sure using axis is correct
+			let block = Vorld.getBlockByIndex(vorld, i, j, k, chunkI, chunkJ, chunkK);
+			let def = BlockConfig.getBlockTypeDefinition(vorld, block);
+			if (def && def.directionalAttenuation) {
+				let globalAxis = Cardinal.getAxis(axis, Vorld.getBlockRotation(
+					vorld,
+					chunkI * vorld.chunkSize + i,
+					chunkJ * vorld.chunkSize + j,
+					chunkK * vorld.chunkSize + k));
+				let attenuation = def.directionalAttenuation[globalAxis];
+				let prev = light;
+				light = Math.max(0, light - attenuation);
+			}
+			// This isn't working, I need to visualise what's happening and check my assumptions if I want to continue with this.
+		}
+		return light;
+	};
+
 	let calculateLightLevel = (vorld, vertex, direction, i, j, k, chunkI, chunkJ, chunkK, getLightDelegate) => {
 		// Return adj block light value - if vertex is at integer position
 		// if it's it mid block, just return the block light value 
@@ -114,11 +136,12 @@ module.exports = (function(){
 			// can't just do it in the delegate because the direction is important
 			case Cardinal.Direction.up:
 			case Cardinal.Direction.down:
-				adj = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k) || 0;
-				side0 = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k) || 0;
-				side1 = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k + aov[2]) || 0;
-				corner = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2]) || 0;
+				adj = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k, 1, aov, getLightDelegate) || 0;
+				side0 = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k, 1, aov, getLightDelegate) || 0;
+				side1 = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k + aov[2], 1, aov, getLightDelegate) || 0;
+				corner = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2], 1, aov, getLightDelegate) || 0;
 				if (!side0 && !side1 && corner > 0) {
+					// Is this causing light bleed? I don't think so, but it might
 					// If no light at side0 and side1 they may be opaque in which case we should ignore any light value from corner
 					let x = chunkI * vorld.chunkSize + i, y = chunkJ * vorld.chunkSize + j, z = chunkK * vorld.chunkSize + k;
 					if (Vorld.isBlockOpaque(vorld, x + aov[0], y + aov[1], z) 
@@ -129,10 +152,10 @@ module.exports = (function(){
 				break;
 			case Cardinal.Direction.forward:
 			case Cardinal.Direction.back:
-				adj = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i, j, k + aov[2]) || 0;
-				side0 = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k + aov[2]) || 0;
-				side1 = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k + aov[2]) || 0;
-				corner = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2]) || 0;
+				adj = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i, j, k + aov[2], 2, aov, getLightDelegate) || 0;
+				side0 = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k + aov[2], 2, aov, getLightDelegate) || 0;
+				side1 = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k + aov[2], 2, aov, getLightDelegate) || 0;
+				corner = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2], 2, aov, getLightDelegate) || 0;
 				if (!side0 && !side1 && corner > 0) {
 					// If no light at side0 and side1 they may be opaque in which case we should ignore any light value from corner
 					let x = chunkI * vorld.chunkSize + i, y = chunkJ * vorld.chunkSize + j, z = chunkK * vorld.chunkSize + k;
@@ -144,10 +167,10 @@ module.exports = (function(){
 				break;
 			case Cardinal.Direction.left:
 			case Cardinal.Direction.right:
-				adj = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k) || 0;
-				side0 = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k + aov[2]) || 0;
-				side1 = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k) || 0;
-				corner = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2]) || 0;
+				adj = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k, 0, aov, getLightDelegate) || 0;
+				side0 = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k + aov[2], 0, aov, getLightDelegate) || 0;
+				side1 = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k, 0, aov, getLightDelegate) || 0;
+				corner = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2], 0, aov, getLightDelegate) || 0;
 				if (!side0 && !side1 && corner > 0) {
 					// If no light at side0 and side1 they may be opaque in which case we should ignore any light value from corner
 					let x = chunkI * vorld.chunkSize + i, y = chunkJ * vorld.chunkSize + j, z = chunkK * vorld.chunkSize + k;
