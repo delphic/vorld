@@ -99,57 +99,111 @@ module.exports = (function(){
 		}
 	};
 
+	let getAttenuatedLight = (vorld, chunkI, chunkJ, chunkK, i, j, k, aov, getLightDelegate) => {
+		let light = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i, j, k);
+		if (light > 0) {
+			// BUG: this is overzealous, halfblocks in a pattern end up shaded on top
+			// even when in direct sunlight from above, however only checking one axis direction is insufficient
+			let attenuation = getMaxAttenuationInDirections(vorld, chunkI, chunkJ, chunkK, i, j, k, aov);
+			light = Math.max(0, light - attenuation);
+		}
+		return light;
+	};
+
+	let getMaxAttenuationInDirections = (vorld, chunkI, chunkJ, chunkK, i, j, k, aov) => {
+		// Some of these look ups are presumably dupes across calls, when not all aov are non-zero
+		let attenuation = 0; // Arguably this should start as def.attenuation
+		let block = Vorld.getBlockByIndex(vorld, i, j, k, chunkI, chunkJ, chunkK);
+		let def = BlockConfig.getBlockTypeDefinition(vorld, block);
+		if (def && def.directionalAttenuation) {
+			let rotation = Vorld.getBlockRotationByIndex(
+				vorld,
+				i,
+				j,
+				k,
+				chunkI,
+				chunkJ,
+				chunkK);
+			for (let axis = 0; axis < 3; axis++) {
+				if (aov[axis] != 0) {
+					let globalAxis = Cardinal.getAxis(axis, rotation);
+					attenuation = Math.max(def.directionalAttenuation[globalAxis], attenuation);
+				}
+			}
+		}
+		return attenuation;
+	};
+
 	let calculateLightLevel = (vorld, vertex, direction, i, j, k, chunkI, chunkJ, chunkK, getLightDelegate) => {
 		// Return adj block light value - if vertex is at integer position
 		// if it's it mid block, just return the block light value 
 		aov[0] = (Maths.approximately(vertex[0], Math.round(vertex[0]), 0.0001)) ? Math.round(2 * (vertex[0] - i - 0.5)) : 0;
 		aov[1] = (Maths.approximately(vertex[1], Math.round(vertex[1]), 0.0001)) ? Math.round(2 * (vertex[1] - j - 0.5)) : 0;
 		aov[2] = (Maths.approximately(vertex[2], Math.round(vertex[2]), 0.0001)) ? Math.round(2 * (vertex[2] - k - 0.5)) : 0;
+		// ^^ the values that come out of this will be -1, 0, 1 depending on if at integer position, anywhere mid block, or at integer position
 		let adj = 0, side0 = 0, side1 = 0, corner = 0;
 		switch(direction)
 		{
 			case Cardinal.Direction.up:
 			case Cardinal.Direction.down:
-				adj = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k) || 0;
-				side0 = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k) || 0;
-				side1 = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k + aov[2]) || 0;
-				corner = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2]) || 0;
+				adj = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k, aov, getLightDelegate) || 0;
+				side0 = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k, aov, getLightDelegate) || 0;
+				side1 = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k + aov[2], aov, getLightDelegate) || 0;
+				corner = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2], aov, getLightDelegate) || 0;
 				if (!side0 && !side1 && corner > 0) {
 					// If no light at side0 and side1 they may be opaque in which case we should ignore any light value from corner
 					let x = chunkI * vorld.chunkSize + i, y = chunkJ * vorld.chunkSize + j, z = chunkK * vorld.chunkSize + k;
 					if (Vorld.isBlockOpaque(vorld, x + aov[0], y + aov[1], z) 
 						&& Vorld.isBlockOpaque(vorld, x, y + aov[1], z + aov[2])) {
 						corner = 0;
+					} else { // Or those blocks might attenutate the light
+						// Not sure if we should pass aov as is, or directions which match just the adjustments made
+						let attenutation = Math.max(
+							getMaxAttenuationInDirections(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k, aov),
+							getMaxAttenuationInDirections(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k + aov[2], aov));
+						corner -= attenutation;
 					}
 				}
 				break;
 			case Cardinal.Direction.forward:
 			case Cardinal.Direction.back:
-				adj = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i, j, k + aov[2]) || 0;
-				side0 = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k + aov[2]) || 0;
-				side1 = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k + aov[2]) || 0;
-				corner = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2]) || 0;
+				adj = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i, j, k + aov[2], aov, getLightDelegate) || 0;
+				side0 = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k + aov[2], aov, getLightDelegate) || 0;
+				side1 = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k + aov[2], aov, getLightDelegate) || 0;
+				corner = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2], aov, getLightDelegate) || 0;
 				if (!side0 && !side1 && corner > 0) {
 					// If no light at side0 and side1 they may be opaque in which case we should ignore any light value from corner
 					let x = chunkI * vorld.chunkSize + i, y = chunkJ * vorld.chunkSize + j, z = chunkK * vorld.chunkSize + k;
 					if (Vorld.isBlockOpaque(vorld, x + aov[0], y, z + aov[2]) 
 						&& Vorld.isBlockOpaque(vorld, x, y + aov[1], z + aov[2])) {
 						corner = 0;
+					} else { // Or those might attenutate the light
+						// Not sure if we should pass aov as is, or directions which match just the adjustments made
+						let attenutation = Math.max(
+							getMaxAttenuationInDirections(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k + aov[2], aov),
+							getMaxAttenuationInDirections(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k + aov[2], aov));
+						corner -= attenutation;
 					}
 				}
 				break;
 			case Cardinal.Direction.left:
 			case Cardinal.Direction.right:
-				adj = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k) || 0;
-				side0 = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k + aov[2]) || 0;
-				side1 = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k) || 0;
-				corner = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2]) || 0;
+				adj = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k, aov, getLightDelegate) || 0;
+				side0 = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k + aov[2], aov, getLightDelegate) || 0;
+				side1 = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k, aov, getLightDelegate) || 0;
+				corner = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2], aov, getLightDelegate) || 0;
 				if (!side0 && !side1 && corner > 0) {
 					// If no light at side0 and side1 they may be opaque in which case we should ignore any light value from corner
 					let x = chunkI * vorld.chunkSize + i, y = chunkJ * vorld.chunkSize + j, z = chunkK * vorld.chunkSize + k;
 					if (Vorld.isBlockOpaque(vorld, x + aov[0], y , z+ aov[2]) 
-						&& Vorld.isBlockOpaque(vorld, x + aov[0], y + aov[1], z )) {
+						&& Vorld.isBlockOpaque(vorld, x + aov[0], y + aov[1], z)) {
 						corner = 0;
+					} else { // Or those might attenutate the light
+						// Not sure if we should pass aov as is, or directions which match just the adjustments made
+						let attenutation = Math.max(
+							getMaxAttenuationInDirections(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k + aov[2], aov),
+							getMaxAttenuationInDirections(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k, aov));
+						corner -= attenutation;
 					}
 				}
 				break;
@@ -192,7 +246,8 @@ module.exports = (function(){
 				light = Lighting.getBlockLightByIndex(vorld, chunkI, chunkJ, chunkK, i, j, k);
 				sunlight = Lighting.getBlockSunlightByIndex(vorld, chunkI, chunkJ, chunkK, i, j, k);
 			} else {
-				// else get the adjacent blocks light
+				// else get the adjacent blocks light - note this takes max of all adjacent blocks resulting in vertex lighting
+				// we could vastly simplfy by doing as minecraft and simply using the adjacent block in the direction's light value 
 				light = calculateLightLevel(vorld, vector, direction, i , j, k, chunkI, chunkJ, chunkK, Lighting.getBlockLightByIndex);
 				sunlight = calculateLightLevel(vorld, vector, direction, i , j, k, chunkI, chunkJ, chunkK, Lighting.getBlockSunlightByIndex);
 			}

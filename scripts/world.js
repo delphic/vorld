@@ -69,13 +69,23 @@ module.exports = (function() {
 		return null;
 	};
 
-	exports.getBlockRotation = function(vorld, x, y, z) {
-		let [ chunkI, chunkJ, chunkK, blockI, blockJ, blockK ] = Utils.getIndices(vorld.chunkSize, x, y, z);
+	// Assumes indices are valid
+	let getBlockRotationByIndex = function(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK) {
 		let chunk = exports.getChunk(vorld, chunkI, chunkJ, chunkK);
 		if (chunk) {
 			return Chunk.getBlockRotation(chunk, blockI, blockJ, blockK);
 		}
 		return null;
+	};
+
+	exports.getBlockRotation = function(vorld, x, y, z) {
+		let [ chunkI, chunkJ, chunkK, blockI, blockJ, blockK ] = Utils.getIndices(vorld.chunkSize, x, y, z);
+		return getBlockRotationByIndex(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK);
+	}
+
+	exports.getBlockRotationByIndex = function(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK) {
+		[ chunkI, chunkJ, chunkK, blockI, blockJ, blockK ] = Utils.adjustChunkIndices(vorld.chunkSize, chunkI, chunkJ, chunkK, blockI, blockJ, blockK);
+		return getBlockRotationByIndex(vorld, blockI, blockJ, blockK, chunkI, chunkJ, chunkK);
 	}
 
 	// Assumes valid indicies

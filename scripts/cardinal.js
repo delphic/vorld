@@ -24,7 +24,7 @@ module.exports = (function() {
 	};
 
 	// Enum of all cardinal aligned rotations - could do clever maths but this is more readable and probably more performant
-	// In the form of YZ localY -> global (with x implicit and dependent on handedness), e.g. LeftBack => local up = global left, local forward = global back
+	// In the form of YZ local -> global (with x implicit and dependent on handedness), e.g. LeftBack => local up = global left, local forward = global back
 	// In order of a given y direction, rotating then rotating clockwise around local y, implicit right direction in comment
 	let Rotation = exports.Rotation = {
 		// No Rotations, local up = global up
@@ -198,6 +198,124 @@ module.exports = (function() {
 				return Direction.down;
 			default:
 				return Direction.forward;
+		}
+	};
+
+	exports.getAxis = (axis, rotation) => {
+		switch (axis) {
+			case 0:
+				return exports.getXAxis(rotation);
+			case 1:
+				return exports.getYAxis(rotation);
+			case 2:
+				return exports.getZAxis(rotation);
+			default:
+				return axis;
+		}
+	};
+	
+	// Returns the index of the local X axis in global space
+	exports.getXAxis = (rotation) => {
+		switch(rotation) {
+			case Rotation.upForward:
+			case Rotation.downForward:
+			case Rotation.upBack:
+			case Rotation.downBack:
+			case Rotation.forwardUp:
+			case Rotation.backUp:
+			case Rotation.forwardDown:
+			case Rotation.backDown:
+				return 0;
+			case Rotation.leftForward:
+			case Rotation.rightForward:
+			case Rotation.leftBack:
+			case Rotation.rightBack:
+			case Rotation.forwardLeft:
+			case Rotation.backLeft:
+			case Rotation.forwardRight:
+			case Rotation.backRight:
+				return 1;
+			case Rotation.upLeft:
+			case Rotation.downLeft:
+			case Rotation.upRight:
+			case Rotation.downRight:
+			case Rotation.leftUp:
+			case Rotation.rightUp:
+			case Rotation.leftDown:
+			case Rotation.rightDown:
+				return 2;
+			default:
+				return 0;
+		}
+	};
+
+	// Returns the index of the local Y axis in global space
+	exports.getYAxis = (rotation) => {
+		switch (rotation) {
+			case Rotation.upForward:
+			case Rotation.upRight:
+			case Rotation.upBack:
+			case Rotation.upLeft:
+			case Rotation.downForward:
+			case Rotation.downLeft:
+			case Rotation.downBack:
+			case Rotation.downRight:
+				return 1;
+			case Rotation.leftBack:
+			case Rotation.leftDown:
+			case Rotation.leftForward:
+			case Rotation.leftUp:
+			case Rotation.rightBack:
+			case Rotation.rightDown:
+			case Rotation.rightForward:
+			case Rotation.rightUp:
+				return 0;
+			case Rotation.forwardDown:
+			case Rotation.forwardLeft:
+			case Rotation.forwardRight:
+			case Rotation.forwardUp:
+			case Rotation.backDown:
+			case Rotation.backLeft:
+			case Rotation.backRight:
+			case Rotation.backUp:
+				return 2;
+			default:
+				return 1;
+		}
+	};
+
+	// Returns the index of the local Z axis in global space
+	exports.getZAxis = (rotation) => {
+		switch(rotation) {
+			case Rotation.upForward:
+			case Rotation.downForward:
+			case Rotation.leftForward:
+			case Rotation.rightForward:
+			case Rotation.upBack:
+			case Rotation.downBack:
+			case Rotation.leftBack:
+			case Rotation.rightBack:
+				return 2;
+			case Rotation.upLeft:
+			case Rotation.downLeft:
+			case Rotation.forwardLeft:
+			case Rotation.backLeft:
+			case Rotation.upRight:
+			case Rotation.downRight:
+			case Rotation.forwardRight:
+			case Rotation.backRight:
+				return 0;
+			case Rotation.forwardUp:
+			case Rotation.backUp:
+			case Rotation.leftUp:
+			case Rotation.rightUp:
+			case Rotation.forwardDown:
+			case Rotation.backDown:
+			case Rotation.leftDown:
+			case Rotation.rightDown:
+				return 1;
+			default:
+				return 2;
 		}
 	};
 

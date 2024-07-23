@@ -1,4 +1,5 @@
 const BlockConfig = require('./blockConfig');
+const Cardinal = require('./cardinal');
 const Chunk = require('./chunk');
 const World = require('./world');
 const Maths = require('./maths');
@@ -12,11 +13,17 @@ module.exports = (function(){
 	let removalQueue = VectorQueue.create();
 
 	// Definition Property Helpers
-	let getBlockAttenuation = function(vorld, x, y, z) {
+	let getBlockAttenuation = function(vorld, axis, x, y, z) {
 		let block = World.getBlock(vorld, x, y, z);
 		let def = BlockConfig.getBlockTypeDefinition(vorld, block);
-		if (def && def.attenuation) {
-			return def.attenuation;
+		if (def) {
+			if (def.directionalAttenuation) {
+				let globalAxis = Cardinal.getAxis(axis, World.getBlockRotation(vorld, x, y, z));
+				return def.directionalAttenuation[globalAxis];
+			}
+			if (def.attenuation) {
+				return def.attenuation;
+			}
 		}
 		return 1;
 	}
@@ -104,6 +111,10 @@ module.exports = (function(){
 	};
 
 	let buildAdjacentLightQueue = function(queue, vorld, x, y, z) {
+		if (getBlockLight(vorld, x, y, z)) {
+			// Sort of hack, to cope with removal of attenuating blocks
+			queue.push(x, y, z);
+		}
 		if (getBlockLight(vorld, x + 1, y, z)) {
 			queue.push(x + 1, y, z);
 		}
@@ -125,6 +136,10 @@ module.exports = (function(){
 	};
 
 	let buildAdjacentSunlightQueue = function(queue, vorld, x, y, z) {
+		if (getBlockSunlight(vorld, x, y, z)) {
+			// Sort of hack, to cope with removal of attenuating blocks
+			queue.push(x, y, z);
+		}
 		if (getBlockSunlight(vorld, x + 1, y, z)) {
 			queue.push(x + 1, y, z);
 		}
@@ -278,45 +293,58 @@ module.exports = (function(){
 		// * Check adjacency when filling sunlight horizontally, < 14 to prevent repeated fills into the space
 		// * Use heap instead of queue (prioritise blocks with highest sunlight to set)
 		//   the insert cost may outweigh the reduction in propogation
+		// * Dedicated path for if the block doesn't have directional attenuation to avoid repeated
+		//   calls to getBlockAttenuation
 		while (queue.length) {
 			let pos = queue.pop();
-			let attenuation = getBlockAttenuation(vorld, pos[0], pos[1], pos[2]);
 			let light = !isSunlight ? getBlockLight(vorld, pos[0], pos[1], pos[2]) : getBlockSunlight(vorld, pos[0], pos[1], pos[2]);
-			light -= attenuation;
 
-			// Sunlight doesn't attenuate as it goes down
-			let downLight = light;
-			if (isSunlight && attenuation == 1 && light + attenuation == 15) {
-				downLight = 15;
-			}
-
-			// TODO: Get directional opacity vector, values 0 or 1 - transform by rotation and each axis as appropriate before propogating light
 			// Consider - we could probably store propogation direction histories in our queue - and then simulate bounces better than just flood fill
 
+			// Y Axis
+			let attenuation = getBlockAttenuation(vorld, 1, pos[0], pos[1], pos[2]);
+			let lightY = light - attenuation;
+
 			// Note: Only pushes when new light for block is greater than old value
-			if (light > 0) { 
-				if (trySetLightForBlock(vorld, pos[0], pos[1] + 1, pos[2], light, isSunlight)) {
+
+			if (lightY > 0) { 
+				if (trySetLightForBlock(vorld, pos[0], pos[1] + 1, pos[2], lightY, isSunlight)) {
 					queue.push(pos[0], pos[1] + 1, pos[2]);
 				}
-				if (trySetLightForBlock(vorld, pos[0], pos[1] - 1, pos[2], downLight, isSunlight)) {
+				// Sunlight doesn't attenuate as it goes down
+				if (isSunlight && attenuation == 1 && light == 15) {
+					lightY = 15;
+				}
+				if (trySetLightForBlock(vorld, pos[0], pos[1] - 1, pos[2], lightY, isSunlight)) { 
 					queue.push(pos[0], pos[1] - 1, pos[2]);
 				}
-				// For Sunlight - don't consider horizontally adjacent blocks which will be filled with sunlight
-				// at some point (although they may not have been yet) 
+			}
+
+			// NOTE: For Sunlight - don't consider horizontally adjacent blocks which will be filled with sunlight
+			// at some point (although they may not have been yet).
+			// I.e. only fill blocks below the highest block y in that x, z position.
+
+			// X Axis
+			let lightX = light - getBlockAttenuation(vorld, 0, pos[0], pos[1], pos[2]);
+			if (lightX > 0) {
 				if ((!isSunlight || World.getHighestBlockY(vorld, pos[0] + 1, pos[2]) > pos[1])
-					&& trySetLightForBlock(vorld, pos[0] + 1, pos[1], pos[2], light, isSunlight)) {
+					&& trySetLightForBlock(vorld, pos[0] + 1, pos[1], pos[2], lightX, isSunlight)) {
 					queue.push(pos[0] + 1, pos[1], pos[2]);
 				}
 				if ((!isSunlight || World.getHighestBlockY(vorld, pos[0] - 1, pos[2]) > pos[1])
-					&& trySetLightForBlock(vorld, pos[0] - 1, pos[1], pos[2], light, isSunlight)) {
+					&& trySetLightForBlock(vorld, pos[0] - 1, pos[1], pos[2], lightX, isSunlight)) {
 					queue.push(pos[0] - 1, pos[1], pos[2]);
 				}
+			}
+
+			let lightZ = light - getBlockAttenuation(vorld, 0, pos[0], pos[1], pos[2]);
+			if (lightZ > 0) {
 				if ((!isSunlight || World.getHighestBlockY(vorld, pos[0], pos[2] + 1) > pos[1])
-					&& trySetLightForBlock(vorld, pos[0], pos[1], pos[2] + 1, light, isSunlight)) {
+					&& trySetLightForBlock(vorld, pos[0], pos[1], pos[2] + 1, lightZ, isSunlight)) {
 					queue.push(pos[0], pos[1], pos[2] + 1);
 				}
 				if ((!isSunlight || World.getHighestBlockY(vorld, pos[0], pos[2] - 1) > pos[1])
-					&& trySetLightForBlock(vorld, pos[0], pos[1], pos[2] - 1, light, isSunlight)) {
+					&& trySetLightForBlock(vorld, pos[0], pos[1], pos[2] - 1, lightZ, isSunlight)) {
 					queue.push(pos[0], pos[1], pos[2] - 1);
 				}
 			}
