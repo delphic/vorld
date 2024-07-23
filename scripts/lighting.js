@@ -111,6 +111,10 @@ module.exports = (function(){
 	};
 
 	let buildAdjacentLightQueue = function(queue, vorld, x, y, z) {
+		if (getBlockLight(vorld, x, y, z)) {
+			// Sort of hack, to cope with removal of attenuating blocks
+			queue.push(x, y, z);
+		}
 		if (getBlockLight(vorld, x + 1, y, z)) {
 			queue.push(x + 1, y, z);
 		}
@@ -132,6 +136,10 @@ module.exports = (function(){
 	};
 
 	let buildAdjacentSunlightQueue = function(queue, vorld, x, y, z) {
+		if (getBlockSunlight(vorld, x, y, z)) {
+			// Sort of hack, to cope with removal of attenuating blocks
+			queue.push(x, y, z);
+		}
 		if (getBlockSunlight(vorld, x + 1, y, z)) {
 			queue.push(x + 1, y, z);
 		}
@@ -307,7 +315,7 @@ module.exports = (function(){
 				if (isSunlight && attenuation == 1 && light == 15) {
 					lightY = 15;
 				}
-				if (trySetLightForBlock(vorld, pos[0], pos[1] - 1, pos[2], lightY, isSunlight)) {
+				if (trySetLightForBlock(vorld, pos[0], pos[1] - 1, pos[2], lightY, isSunlight)) { 
 					queue.push(pos[0], pos[1] - 1, pos[2]);
 				}
 			}
