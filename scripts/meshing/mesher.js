@@ -99,26 +99,34 @@ module.exports = (function(){
 		}
 	};
 
-	let getAttenuatedLight = (vorld, chunkI, chunkJ, chunkK, i, j, k, axis, aov, getLightDelegate) => {
-		// this is vile, so many lookups, and converting back to x,y,z only to go back to indices
-		// and some of these look ups might be dupes across calls, still this will be an interesting test to see if it works
+	let getAttenuatedLight = (vorld, chunkI, chunkJ, chunkK, i, j, k, _axis, aov, getLightDelegate) => {
 		let light = getLightDelegate(vorld, chunkI, chunkJ, chunkK, i, j, k);
-		if (aov[axis] != 0) { // not entirely sure using axis is correct
-			let block = Vorld.getBlockByIndex(vorld, i, j, k, chunkI, chunkJ, chunkK);
-			let def = BlockConfig.getBlockTypeDefinition(vorld, block);
-			if (def && def.directionalAttenuation) {
-				let globalAxis = Cardinal.getAxis(axis, Vorld.getBlockRotation(
-					vorld,
-					chunkI * vorld.chunkSize + i,
-					chunkJ * vorld.chunkSize + j,
-					chunkK * vorld.chunkSize + k));
-				let attenuation = def.directionalAttenuation[globalAxis];
-				let prev = light;
-				light = Math.max(0, light - attenuation);
-			}
-			// This isn't working, I need to visualise what's happening and check my assumptions if I want to continue with this.
+		if (light > 0) {
+			let attenuation = getMaxAttenuationInDirections(vorld, chunkI, chunkJ, chunkK, i, j, k, aov);
+			light = Math.max(0, light - attenuation);
 		}
 		return light;
+	};
+
+	let getMaxAttenuationInDirections = (vorld, chunkI, chunkJ, chunkK, i, j, k, aov) => {
+		// Some of these look ups must be dupes across calls
+		let attenuation = 0; // Arguably this should start as def.attenuation
+		let block = Vorld.getBlockByIndex(vorld, i, j, k, chunkI, chunkJ, chunkK);
+		let def = BlockConfig.getBlockTypeDefinition(vorld, block);
+		if (def && def.directionalAttenuation) {
+			let rotation = Vorld.getBlockRotation(
+				vorld,
+				chunkI * vorld.chunkSize + i,
+				chunkJ * vorld.chunkSize + j,
+				chunkK * vorld.chunkSize + k); // todo: remove back and forth coordinate transform
+			for (let axis = 0; axis < 3; axis++) {
+				if (aov[axis] != 0) {
+					let globalAxis = Cardinal.getAxis(axis, rotation);
+					attenuation = Math.max(def.directionalAttenuation[globalAxis], attenuation);
+				}
+			}
+		}
+		return attenuation;
 	};
 
 	let calculateLightLevel = (vorld, vertex, direction, i, j, k, chunkI, chunkJ, chunkK, getLightDelegate) => {
@@ -141,12 +149,17 @@ module.exports = (function(){
 				side1 = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k + aov[2], 1, aov, getLightDelegate) || 0;
 				corner = getAttenuatedLight(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k + aov[2], 1, aov, getLightDelegate) || 0;
 				if (!side0 && !side1 && corner > 0) {
-					// Is this causing light bleed? I don't think so, but it might
 					// If no light at side0 and side1 they may be opaque in which case we should ignore any light value from corner
 					let x = chunkI * vorld.chunkSize + i, y = chunkJ * vorld.chunkSize + j, z = chunkK * vorld.chunkSize + k;
 					if (Vorld.isBlockOpaque(vorld, x + aov[0], y + aov[1], z) 
-						&& Vorld.isBlockOpaque(vorld, x, y + aov[1], z + aov[2])) { // this will need to also check for attenutation? 
+						&& Vorld.isBlockOpaque(vorld, x, y + aov[1], z + aov[2])) {
 						corner = 0;
+					} else { // Or they might attenutate the light
+						// Not sure if we should pass aov as is, or directions which match just the adjustments made
+						let attenutation = Math.max(
+							getMaxAttenuationInDirections(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k, aov),
+							getMaxAttenuationInDirections(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k + aov[2], aov));
+						corner -= attenutation;
 					}
 				}
 				break;
@@ -162,6 +175,12 @@ module.exports = (function(){
 					if (Vorld.isBlockOpaque(vorld, x + aov[0], y, z + aov[2]) 
 						&& Vorld.isBlockOpaque(vorld, x, y + aov[1], z + aov[2])) {
 						corner = 0;
+					} else { // Or they might attenutate the light
+						// Not sure if we should pass aov as is, or directions which match just the adjustments made
+						let attenutation = Math.max(
+							getMaxAttenuationInDirections(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k + aov[2], aov),
+							getMaxAttenuationInDirections(vorld, chunkI, chunkJ, chunkK, i, j + aov[1], k + aov[2], aov));
+						corner -= attenutation;
 					}
 				}
 				break;
@@ -175,8 +194,14 @@ module.exports = (function(){
 					// If no light at side0 and side1 they may be opaque in which case we should ignore any light value from corner
 					let x = chunkI * vorld.chunkSize + i, y = chunkJ * vorld.chunkSize + j, z = chunkK * vorld.chunkSize + k;
 					if (Vorld.isBlockOpaque(vorld, x + aov[0], y , z+ aov[2]) 
-						&& Vorld.isBlockOpaque(vorld, x + aov[0], y + aov[1], z )) {
+						&& Vorld.isBlockOpaque(vorld, x + aov[0], y + aov[1], z)) {
 						corner = 0;
+					} else { // Or they might attenutate the light
+						// Not sure if we should pass aov as is, or directions which match just the adjustments made
+						let attenutation = Math.max(
+							getMaxAttenuationInDirections(vorld, chunkI, chunkJ, chunkK, i + aov[0], j, k + aov[2], aov),
+							getMaxAttenuationInDirections(vorld, chunkI, chunkJ, chunkK, i + aov[0], j + aov[1], k, aov));
+						corner -= attenutation;
 					}
 				}
 				break;
