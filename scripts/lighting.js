@@ -96,6 +96,9 @@ module.exports = (function(){
 			if (propagationQueue.length) {
 				propagateLight(vorld, propagationQueue, true);
 			}
+			// TODO: check the 'fix' for direction attenuation of including the
+			// position (x,y,z) in the queue is not necessary for normal attenuation
+			// - will be more apparent if the attenuation value is higher
 			// TODO: Handle empty adjacent chunks for sunlight
 			// requires going *up* to the top of the chunk and propagating down 
 			// if there's no adjacent chunk *and* maxY for that x/z is less than y
@@ -291,6 +294,8 @@ module.exports = (function(){
 			}
 
 			// TODO: Get directional opacity vector, values 0 or 1 - transform by rotation and each axis as appropriate before propogating light
+			// Can examine previous attempt of direction attenuation by reverting 7f592a8 - however this was flawed in multiple ways - the primary issue
+			// stemming from the fact it's unclear what light value the block that partially blocks light should have to allow the mesher to correctly bake the light levels
 			// Consider - we could probably store propogation direction histories in our queue - and then simulate bounces better than just flood fill
 
 			// Note: Only pushes when new light for block is greater than old value
