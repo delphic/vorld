@@ -96,9 +96,6 @@ module.exports = (function(){
 			if (propagationQueue.length) {
 				propagateLight(vorld, propagationQueue, true);
 			}
-			// TODO: check the 'fix' for direction attenuation of including the
-			// position (x,y,z) in the queue is not necessary for normal attenuation
-			// - will be more apparent if the attenuation value is higher
 			// TODO: Handle empty adjacent chunks for sunlight
 			// requires going *up* to the top of the chunk and propagating down 
 			// if there's no adjacent chunk *and* maxY for that x/z is less than y
@@ -107,6 +104,11 @@ module.exports = (function(){
 	};
 
 	let buildAdjacentLightQueue = function(queue, vorld, x, y, z) {
+		// Seems to be required for changes based
+		// on attenuation to correctly propogate
+		if (getBlockAttenuation(vorld, x, y, z)) {
+			queue.push(x,y,z);
+		}
 		if (getBlockLight(vorld, x + 1, y, z)) {
 			queue.push(x + 1, y, z);
 		}
@@ -128,6 +130,11 @@ module.exports = (function(){
 	};
 
 	let buildAdjacentSunlightQueue = function(queue, vorld, x, y, z) {
+		// Seems to be required for changes based
+		// on attenuation to correctly propogate
+		if (getBlockSunlight(vorld, x, y, z)) {
+			queue.push(x,y,z);
+		}
 		if (getBlockSunlight(vorld, x + 1, y, z)) {
 			queue.push(x + 1, y, z);
 		}

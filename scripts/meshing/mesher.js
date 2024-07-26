@@ -242,7 +242,44 @@ module.exports = (function(){
 		concat(mesh.uvs, uvs);
 		concat(mesh.tileIndices, tileIndices);
 		concat(mesh.lightBake, lightBake);
-		mesh.indices.push(n,n+1,n+2, n,n+2,n+3);
+
+		// Compare light values to determine best triangle orientation
+		// the diagonal with the biggest difference / lowest min value should *not* have the edge
+		// a is from index 0 to 2, b is from index 1 to 3
+		let light0 = Math.floor(lightBake[0]);
+		let light1 = Math.floor(lightBake[1]);
+		let light2 = Math.floor(lightBake[2]);
+		let light3 = Math.floor(lightBake[3]);
+		let diffA = Math.abs(light0 - light2);
+		let diffB = Math.abs(light1 - light3);
+
+		if (diffB > diffA) {
+			mesh.indices.push(n,n+1,n+2, n,n+2,n+3);
+		} else if (diffA > diffB) {
+			mesh.indices.push(n+3,n,n+1, n+3,n+1,n+2);
+		} else {
+			// Check sunlight if light diff levels are the same
+			let sunlight0 = Math.round((lightBake[0] - light0) * 16);
+			let sunlight1 = Math.round((lightBake[1] - light1) * 16);
+			let sunlight2 = Math.round((lightBake[2] - light2) * 16);
+			let sunlight3 = Math.round((lightBake[3] - light3) * 16);
+			let sunDiffA = Math.abs(sunlight0 - sunlight2);
+			let sunDiffB = Math.abs(sunlight1 - sunlight3);
+			if (sunDiffB > sunDiffA) {
+				mesh.indices.push(n,n+1,n+2, n,n+2,n+3);
+			} else if (sunDiffA > sunDiffB) {
+				mesh.indices.push(n+3,n,n+1, n+3,n+1,n+2);
+			} else {
+				// Could consider sunlight here but perhaps better prioritise what it'll look like at night
+				let minA = Math.min(light0, light2);
+				let minB = Math.min(light1, light3);
+				if (minA < minB) {
+					mesh.indices.push(n+3,n,n+1, n+3,n+1,n+2);
+				} else {
+					mesh.indices.push(n,n+1,n+2, n,n+2,n+3);
+				}
+			}
+		}
 	};
 
 	let addCustomBlockMeshToMesh = (mesh, customMesh, vorld, atlas, block, rotation, i, j, k, chunkI, chunkJ, chunkK) => {
