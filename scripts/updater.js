@@ -7,6 +7,9 @@ module.exports = (function(){
 	let exports = {};
 	
 	// TODO: Review use of this in generators - arguably generators should simply setBlocks and light should be propogated afterwards
+	// That would require some kind of "just nuke and regenerate lighting for this chunk" - would be nice if the propogate light methods
+	// could tell you if they'd crossed the border into other chunks, so that data could be used for remeshing 
+	// although it should be noted, updating lighting of blocks on the border is enough to require remeshing
 	exports.addBlock = function(vorld, x, y, z, block, up, forward) {
 		let previousBlock = World.getBlock(vorld, x, y, z);
 		let previousYMax = World.getHighestBlockY(vorld, x, z);
@@ -57,7 +60,6 @@ module.exports = (function(){
 		}
 		// Update lighting
 		Lighting.updateLightForBlock(vorld, x, y, z, previousBlock, block);
-		// Q: I think this propogates lighting changes for sunlight as well, could this be doubling up with addSunlight above?
 	};
 
 	return exports;
