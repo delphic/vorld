@@ -96,7 +96,7 @@ module.exports = (function(){
 		};
 
 		let generator = TerrainGenerator.create({
-			seed: data.seed,
+			seed: data.seed ?? generationRules.seed,
 			baseWavelength: generationRules.baseWavelength,
 			weightings: generationRules.octaveWeightings,
 			noiseOffset: generationRules.neutralNoise ? 0 : 0.5,
