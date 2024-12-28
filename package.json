@@ -1,6 +1,6 @@
 {
 	"name": "vorld",
-	"version": "0.5.1",
+	"version": "0.5.2",
 	"description": "Helpers for generating voxel worlds",
 	"author": "delphic",
 	"license": "MIT",
@@ -8,8 +8,5 @@
 	"dependencies": {
 		"fury": "npm:fury-js@^0.1"
 	},
-	"main": "scripts/vorld.js",
-	"devDependencies": {
-		"eslint": "^8.2.0"
-	}
+	"main": "scripts/vorld.js"
 }
